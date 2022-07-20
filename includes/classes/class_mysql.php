@@ -176,11 +176,11 @@ class td_class_db_mysqli {
         {
             if ( $do['insert'] )
             {
-                $this->query_id = 'INSERT INTO `'. TDDB_PRE . mysqli_real_escape_string( $do['insert'] ) .'`';
+                $this->query_id = 'INSERT INTO `'. TDDB_PRE . mysqli_real_escape_string($this->cid, $do['insert'] ) .'`';
             }
             else
             {
-                $this->query_id = 'UPDATE `'. TDDB_PRE . mysqli_real_escape_string( $do['update'] ) .'`';
+                $this->query_id = 'UPDATE `'. TDDB_PRE . mysqli_real_escape_string($this->cid,  $do['update'] ) .'`';
             }
 
             $this->query_id .= ' SET';
@@ -337,16 +337,16 @@ class td_class_db_mysqli {
         {
             $this->query_id .= ' WHERE';
 
-            if ( is_array( $do['where'][0] ) )
+            if ( is_array( $do['where'][0][0] ) )
             {
                 if ( is_array( $do['join'] ) )
                 {
-                    if ( is_array( $do['where'][0][0] ) )
+                    if ( is_array( $do['where'][0] ) )
                     {
                         //while( list( , $where ) = each( $do['where'] ) )
                             foreach($do['where']  as $where)
                         {
-                            if ( is_array( $where[0][0] ) )  # FIXME: This whole file is a mess. Let's use functions and really clean this up. This slight modification is due to group where conditions. Don't break anything. Check with ticket list (should also show tickets that you're assigned to even if they are outside your department)
+                            if ( is_array( $where[0] ) )  # FIXME: This whole file is a mess. Let's use functions and really clean this up. This slight modification is due to group where conditions. Don't break anything. Check with ticket list (should also show tickets that you're assigned to even if they are outside your department)
                             {
                                 $this->query_id .= $this->add_logic( end( $where ) );
 
@@ -354,45 +354,55 @@ class td_class_db_mysqli {
 
                                 $whereb = $where;
 
-                                foreach( $whereb as $where )
-                                {
-                                    if ( ! is_array( $where[0] ) ) continue;
+                                //foreach( $whereb as $where )
+                                //{
+                                    //if ( ! is_array( $where ) ) continue;
+
 
                                     //list( $final_id, $final_field ) = each( $where[0] );
-                                    foreach($where[0] as $item){
-                                        list( $final_id, $final_field ) = $item;
+                                    $testArray = $whereb[0];
+
+                                    foreach($testArray as $final_id => $final_field ){
+                                        $this->add_logic( $whereb[3] );
+                                        if (is_array($final_field)){
+                                            foreach($final_field as $key => $value)
+                                            {
+                                                $final_id = $key;
+                                                $final_field = $value;
+                                            }
+
+                                        }
+                                        if ( strpos( $final_field, '|' ) )
+                                        {
+                                            $wdata = explode( '|', $whereb[0] );
+
+                                            $this->query_id .= $this->get_function( $final_id .'.`'. $wdata[0] .'`', $wdata[1] );
+                                        }
+                                        else
+                                        {
+                                            $this->query_id .= ' '. $final_id .'.`'. mysqli_real_escape_string($this->cid, $final_field ) .'`';
+                                        }
+
+                                        if ( $whereb[1] == 'in' )
+                                        {
+                                            $this->add_where_in( $whereb[2] );
+                                        }
+                                        elseif ( $whereb[1] == 'like' )
+                                        {
+                                            $this->add_where_like( $whereb[2] );
+                                        }
+                                        elseif ( $where[1] == 'is' )
+                                        {
+                                            $this->add_where_is( $whereb[2] );
+                                        }
+                                        else
+                                        {
+                                            $this->query_id .= ' '. $whereb[1].' \''. mysqli_real_escape_string($this->cid,  $whereb[2] ) .'\'';
+                                        }
                                     }
 
-                                    $this->add_logic( $where[3] );
 
-                                    if ( strpos( $final_field, '|' ) )
-                                    {
-                                        $wdata = explode( '|', $where[0] );
-
-                                        $this->query_id .= $this->get_function( $final_id .'.`'. $wdata[0] .'`', $wdata[1] );
-                                    }
-                                    else
-                                    {
-                                        $this->query_id .= ' '. $final_id .'.`'. mysqli_real_escape_string($this->cid, $final_field ) .'`';
-                                    }
-
-                                    if ( $where[1] == 'in' )
-                                    {
-                                        $this->add_where_in( $where[2] );
-                                    }
-                                    elseif ( $where[1] == 'like' )
-                                    {
-                                        $this->add_where_like( $where[2] );
-                                    }
-                                    elseif ( $where[1] == 'is' )
-                                    {
-                                        $this->add_where_is( $where[2] );
-                                    }
-                                    else
-                                    {
-                                        $this->query_id .= ' '. $where[1].' \''. mysqli_real_escape_string($this->cid,  $where[2] ) .'\'';
-                                    }
-                                }
+                                //}
 
                                 $this->query_id .= ' )';
                             }
@@ -512,7 +522,29 @@ class td_class_db_mysqli {
             }
             else
             {
-                if ( strpos( $do['where'][0], '|' ) )
+                if (is_array($do['where'][0])){
+                    $mystring = implode(" ", $do['where'][0]);
+                } else {
+                    $mystring = $do['where'][0];
+                }
+
+                $myarray = $do['where'][0];
+                $final_id = '';
+                $final_field = '';
+
+
+                if (is_array($myarray)) {
+                    foreach($myarray as $id => $where){
+                        $final_id =  $id;
+                        $final_field = $where;
+
+                    }
+
+                }
+
+
+
+                if ( strpos( $mystring, '|' ) )
                 {
                     $wdata = explode( '|', $do['where'][0] );
 
@@ -520,7 +552,13 @@ class td_class_db_mysqli {
                 }
                 else
                 {
-                    $this->query_id .= ' `'. mysqli_real_escape_string($this->cid, $do['where'][0] ) .'` ';
+                    if(is_array($myarray)){
+                        $this->query_id .= ' '. $final_id .'.`'. mysqli_real_escape_string($this->cid, $final_field ) .'`';
+
+                    } else {
+                        $this->query_id .= ' `'. mysqli_real_escape_string($this->cid, $do['where'][0] ) .'` ';
+                    }
+
                 }
 
                 if ( $do['where'][1] == 'in' )
@@ -565,10 +603,10 @@ class td_class_db_mysqli {
             {
                 if ( is_array( $do['join'] ) )
                 {
-                    list( $id, $real_order ) = each( $order );
-                    foreach($order as $item){
-                        list( $id, $real_order ) = $item;
-                    }
+                    list( $id => $real_order ) = $order; //each( $order );
+//                    foreach($order as $item){
+//                        list( $id, $real_order ) = $item;
+//                    }
 
                     $this->query_id .= ' '. $id .'.`'. mysqli_real_escape_string($this->cid, $field ) .'` '. mysqli_real_escape_string($this->cid, $real_order ) .',';
                 }

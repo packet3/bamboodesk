@@ -609,7 +609,7 @@ class td_ad_home {
         # Sidebar Menu
         #=============================
 
-        $mysql_version = mysql_get_server_info();
+        $mysql_version = mysqli_get_server_info();
 
         if ( strpos( $mysql_version, '-' ) )
         {

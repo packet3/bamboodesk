@@ -322,15 +322,20 @@ class td_func_rebuild {
 
         # TODO: Sub-groups
 
-        $this->trellis->db->construct( array(
-                                             'select'    => array( 'u' => array( 'id', 'name', 'ugroup', 'ugroup_sub', 'ugroup_sub_acp' ), 'g' => array( 'g_hide_names', 'g_acp_access', 'g_acp_depart_perm' ) ),
-                                             'from'        => array( 'u' => 'users' ),
-                                             'join'        => array( array( 'from' => array( 'g' => 'groups' ), 'where' => array( 'u' => 'ugroup', '=', 'g' => 'g_id' ) ) ),
-                                             'where'    => array( array( array( 'g' => 'g_acp_access' ), '=', 1 ), array( array( 'u' => 'ugroup_sub_acp' ), '=', 1, 'or' ) ),
-                                             'order'    => array( 'name' => array( 'u' => 'desc' ) ),
-                                      )      );
+        //Added Hardcoded Query instead of array based Query
+        $sql = "SELECT u.`id`, u.`name`, u.`ugroup`, u.`ugroup_sub`, u.`ugroup_sub_acp`, g.`g_hide_names`, g.`g_acp_access`,
+       g.`g_acp_depart_perm` FROM `td_users` u LEFT JOIN `td_groups` g ON ( u.`ugroup` = g.`g_id` )
+                             WHERE (g.g_acp_access = 1) OR (u.ugroup_sub_acp = 1);";
 
-        $this->trellis->db->execute();
+//        $this->trellis->db->construct( array(
+//                                             'select'    => array( 'u' => array( 'id', 'name', 'ugroup', 'ugroup_sub', 'ugroup_sub_acp' ), 'g' => array( 'g_hide_names', 'g_acp_access', 'g_acp_depart_perm' ) ),
+//                                             'from'        => array( 'u' => 'users' ),
+//                                             'join'        => array( array( 'from' => array( 'g' => 'groups' ), 'where' => array( 'u' => 'ugroup', '=', 'g' => 'g_id' ) ) ),
+//                                             'where'    => array( array( array( 'g' => 'g_acp_access' ), '=', 1 ), array( array( 'u' => 'ugroup_sub_acp' ), '=', 1, 'or' ) ),
+//                                             'order'    => array( 'name' => array( 'u' => 'desc' ) ),
+//                                      )      );
+
+        $this->trellis->db->execute($sql);
 
         while ( $s = $this->trellis->db->fetch_row() )
         {
