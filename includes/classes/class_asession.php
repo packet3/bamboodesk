@@ -297,7 +297,8 @@ class td_class_asession {
             $time = time();
 
             $sql = "INSERT INTO `td_asessions` SET `s_id` = '$new_session', `s_uid` = '$memberID', 
-        `s_uname` = '$memberName', `s_ipadd` = '$IpAddress', `s_location` = '$location', `s_time` = '$time', `s_inticket` = '0', `s_messages` = '';";
+        `s_uname` = '$memberName', `s_ipadd` = '$IpAddress', `s_location` = '$location', `s_time` = '$time', `s_inticket` = '0', `s_messages` = '',
+        `s_email` = '';";
 //            $this->trellis->db->construct( array(
 //                                                       'insert'    => 'asessions',
 //                                                       'set'        => $db_array,

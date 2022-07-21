@@ -363,7 +363,7 @@ class td_class_db_mysqli {
                                     $testArray = $whereb[0];
 
                                     foreach($testArray as $final_id => $final_field ){
-                                        $this->add_logic( $whereb[3] );
+                                        //$this->add_logic( $whereb[3] );
                                         if (is_array($final_field)){
                                             foreach($final_field as $key => $value)
                                             {
@@ -380,7 +380,13 @@ class td_class_db_mysqli {
                                         }
                                         else
                                         {
-                                            $this->query_id .= ' '. $final_id .'.`'. mysqli_real_escape_string($this->cid, $final_field ) .'`';
+                                            if (is_numeric($final_id)){
+
+                                                $this->query_id .= ' '. mysqli_real_escape_string($this->cid, $final_field ) .' ';
+                                            } else {
+                                                $this->query_id .= ' '. $final_id .'.`'. mysqli_real_escape_string($this->cid, $final_field ) .'`';
+                                            }
+
                                         }
 
                                         if ( $whereb[1] == 'in' )
@@ -397,7 +403,11 @@ class td_class_db_mysqli {
                                         }
                                         else
                                         {
-                                            $this->query_id .= ' '. $whereb[1].' \''. mysqli_real_escape_string($this->cid,  $whereb[2] ) .'\'';
+                                            if(!is_array($whereb[1]) and !is_array($whereb[2] ))
+                                            {
+                                                $this->query_id .= ' '. $whereb[1].' \''. mysqli_real_escape_string($this->cid,  $whereb[2] ) .'\'';
+                                            }
+
                                         }
                                     }
 
@@ -601,7 +611,7 @@ class td_class_db_mysqli {
             //while( list( $field, $order ) = each( $do['order'] ) )
                 foreach($do['order']  as $field => $order)
             {
-                if ( is_array( $do['join'] ) )
+            if ( is_array( $do['join'] ) )
                 {
                     list( $id => $real_order ) = $order; //each( $order );
 //                    foreach($order as $item){
