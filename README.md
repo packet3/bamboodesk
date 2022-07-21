@@ -1,38 +1,40 @@
-Trellis Desk
+Bamboo Desk
 ============
 
-What is Trellis Desk?
+What is Bamboo Desk?
 ---------------------
+Bamboo Desk is a forked rebirth of [Trellis Desk](https://github.com/ACCORD5/TrellisDesk) 
+Originally created by Accord5 (a company that no longer exists).
 
-Trellis Desk is a powerful and robust help desk solution for your business.
-Improve your company's service by allowing your customers to quickly and easily
-submit support tickets to your team.  Trellis Desk sports a range of advanced
-features that enable your business to handle customer support more efficiently.
-Plus, it's completely free – you'll never have to pay any license fees to use
-Trellis Desk.
+Development of Trellis Desk stopped 10 years ago. I, Joe enjoyed using the software back
+then.  I decided to start off from where the original developers had finished.
+
+my goal is to make Bamboo Desk the best self-hosted helpdesk software there is 
 
 
 Status
 ------
 
-Trellis Desk 2.0 is under heavy development and not recommended for a production
-environment.  With the help of user contributions and the support of the
-community, we hope to have a stable, documented release by the end of 2011.
+Bamboo Desk 1.0 is under development,  and I can only work on it when I
+have the time and is not recommended for a production
+environment.  With the help of user contributions (Hint if you would like to help out I would be grateful) and the support of the
+community, I  hope to have a stable, documented release by the end of 2022 or early 2023.
+
 
 
 Requirements
 ------------
 
-* PHP 5.3
-* MySQL 4.1
+* PHP 7.4+
+* MySQL 5.7+
 * GD2 + FreeType (for some CAPTCHA support)
 
 
 Installation
 ------------
 
-Trellis Desk 2.0 is in an early development stage.  We strongly recommend
-against using Trellis Desk 2.0 in a production environment.  To install, simply
+Bamboo Desk 1.0 is in an early development stage.  We strongly recommend
+against using Bamboo Desk 1.0 in a production environment.  To install, simply
 upload all files to your web server, point your browser to the *install*
 directory, and follow the on-screen instructions.
 
@@ -40,31 +42,29 @@ directory, and follow the on-screen instructions.
 Why Open Source?
 ----------------
 
-Trellis Desk has traditionally been developed in our spare time, which makes it
-rather difficult to release new versions on a reliable schedule. Our customers
-have been clamoring for more frequent updates or the ability to merge their own
-fixes and additions into the codebase. We are open-sourcing this product because
-we want to see it continue to grow and thrive with the help of the community,
-rather than be hampered by limited resources.
+I can only develop Bamboo Desk in my spare time. I want Bamboo Desk to succeed and releasing the software
+as open source I believe in time that the community members can help grow and make Bamboo Desk a successful project.
+
 
 
 Plan
 --------
+Since Bamboo Desk is a rebirth (forked) copy of the original Trellis Desk which was orginally
+created for PHP 5, There is a lot of Bug fixes, deprecated code and re-writes to be done
+to bring Bamboo Desk into the modern world.
 
-Let's get the ACP (backend) as closed to finished as possible before working on
-the frontend.  We're almost there!
+such tasks include but not limited too:
+- Remove Jquery Dependency
+- Remove Deprecated code 
+- Improve PHP Code to work with PHP 7.4+
+- Improve the UI
+- Follow OOP
+- Improve Database Access and Queries
 
-The frontend needs a good amount of work.  It's using a lot of old code from
-Trellis Desk 1.0.  Let's not worry about looks right now.  Focus on
-functionality.  We'll skin it up all nice and pretty later.
 
-### Notable ACP To-Dos
-
-### Notable Frontend To-Dos
-* User registration
 
 Of course, head on over to the
-[issue tracker](https://github.com/ACCORD5/TrellisDesk/issues) for more.
+[issue tracker](https://github.com/packet3/bamboodesk/issues) for more.
 
 
 Contributing
@@ -74,43 +74,38 @@ Everyone is invited to contribute their own bug fixes and feature additions.
 GitHub pull requests are preferred, but if you want to attach a diff to a ticket
 or link us to your branch, that's cool too.
 
-Find a bug in Trellis Desk? Please submit a
-[new issue on GitHub](https://github.com/ACCORD5/TrellisDesk/issues/new).
+Find a bug in Bamboo Desk (Probably Loads at this stage)? Please submit a
+[new issue on GitHub](https://github.com/packet3/bamboodesk/issues/new).
 
 Or maybe you're in the mood to hunt some bugs yourself? Hit up the
-[GitHub issue tracker](https://github.com/ACCORD5/TrellisDesk/issues)!
+[GitHub issue tracker](https://github.com/packet3/bamboodesk/issues)!
 
-In all honesty, many will find the Trellis Desk 2.0 code unorganized.  Many of
-the code originates from over two years ago before I (DJ Tarazona) had a deep
-understanding of Object-Oriented Programming.  Each time I contribute to Trellis
-Desk, I have a desire to reorganize the code into an MVC architecture.  At this
-time, I feel that task may be better suited for (dare I say?) Trellis Desk 3.
-However if anyone wants to take a whack at it -- be my guest!
+In all honesty, many will find the Bamboo Desk 1.0 code unorganized.  Many of
+the code originates from the original forked project Trellis Desk before I (Joe) decided to give it a rebirth
+
 
 
 I Need Help!
 ------------
 
-Don't hesitate to check out our
-[support forums](http://forums.accord5.com/forum/peer-to-peer-support).
+Support Forums Comming Soon
 
 
 Questions and Comments
 ----------------------
 
-Feel free to check out our [website](http://accord5.com/) or
-[forums](http://forums.accord5.com/).
+Website Comming Soon
 
 
 License
 -------
 
-Trellis Desk is free software: you can redistribute it and/or modify
+Bamboo Desk is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-Trellis Desk is distributed in the hope that it will be useful,
+Bamboo Desk is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 [GNU General Public License](http://www.gnu.org/licenses/gpl.txt)
