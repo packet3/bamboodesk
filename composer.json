@@ -1,0 +1,16 @@
+{
+    "name": "alittleblueorange/bamboodesk",
+    "autoload": {
+        "psr-4": {
+            "BambooDesk\\": ["includes/classes/", "install/classes/", "install/classes/steps/"]
+        }
+    },
+    "description": "BambooDesk Helpdesk software",
+    "authors": [
+        {
+            "name": "Alittle blueorange",
+            "email": "bamboo@alittleblueorange.com"
+        }
+    ],
+    "require": {}
+}

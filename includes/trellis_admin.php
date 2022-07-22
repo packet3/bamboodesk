@@ -177,14 +177,15 @@ class trellis_admin extends trellis {
     private function ajax_user_lookup()
     {
         $users = array();
+        $sql = "SELECT id, name FROM users WHERE name LIKE %:input%";
+        $u = $this->database->runSql($sql, [$this->input['q']])->fetchAll();
+//        $this->db->construct( array(
+//                                            'select'    => array( 'id', 'name' ),
+//                                            'from'    => 'users',
+//                                            'where'    => array( 'name', 'like', addcslashes( $this->input['q'], '%_' ) .'%' ),
+//                                    )      );
 
-        $this->db->construct( array(
-                                            'select'    => array( 'id', 'name' ),
-                                            'from'    => 'users',
-                                            'where'    => array( 'name', 'like', addcslashes( $this->input['q'], '%_' ) .'%' ),
-                                    )      );
-
-        $this->db->execute();
+//        $this->db->execute();
 
         while( $u = $this->db->fetch_row() )
         {

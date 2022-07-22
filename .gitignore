@@ -76,3 +76,5 @@ error_log
 /data/uploads/*
 !/data/uploads/index.html
 /install/install.lock
+
+/vendor/

@@ -25,6 +25,12 @@ class trellis {
     function __construct()
     {
         #=============================
+        # Get Autoloader
+        #=============================
+
+        require_once TD_PATH  . '/vendor/autoload.php';
+
+        #=============================
         # Start Execution Timer
         #=============================
 
@@ -67,12 +73,17 @@ class trellis {
         $this->cache = new td_class_cache( $this->config['cache_path'] .'trellis/', $this->config['flatfile_key'] );
 
         #=============================
-        # Load Database
+        # Load Database - OLD VERSION - Will be moved as project migrates away
         #=============================
 
         require_once TD_CLASS .'mysql.php';
 
         $this->db = new td_class_db_mysqli( array( 'host' => $this->config['db_host'], 'port' => $this->config['db_port'], 'user' => $this->config['db_user'], 'pass' => $this->config['db_pass'], 'name' => $this->config['db_name'], 'prefix' => $this->config['db_prefix'], 'shutdown_queries' => $this->config['db_shutdown_queries'] ) );
+
+        #=============================
+        # Load Database - NEW WAY
+        #=============================
+        $this->database = new \BambooDesk\Database($this->config['dsn'], $this->config['db_user'], $this->config['db_pass']);
 
         #=============================
         # Load Templates
@@ -130,6 +141,9 @@ class trellis {
 
         $this->session = new td_class_session();
         $this->session->trellis = &$this;
+
+        //new code
+        $this->session->bamboo = &$this;
 
         if ( $this->input['do_login'] )
         {

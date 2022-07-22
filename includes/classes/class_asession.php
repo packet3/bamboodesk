@@ -48,24 +48,13 @@ class td_class_asession {
              us.`sort_tm`, us.`order_tm`, us.`dfilters_status`, us.`dfilters_depart`, us.`dfilters_priority`, 
              us.`dfilters_flag`, us.`dfilters_assigned`, us.`auto_assign`, g.* FROM `td_asessions` s 
              LEFT JOIN `td_users` u ON ( s.`s_uid` = u.`id` ) LEFT JOIN `td_users_staff` us ON ( s.`s_uid` = us.`uid` )
-              LEFT JOIN `td_groups` g ON ( g.`g_id` = u.`ugroup` ) WHERE s.`s_id` = '$cookie_sid' LIMIT 0,1;";
-//            $this->trellis->db->construct( array(
-//                                                       'select'    => array( 's' => 'all',
-//                                                                             'u' => array( 'id', 'name', 'email', 'login_key', 'ugroup', 'ugroup_sub', 'ugroup_sub_acp', 'title', 'joined', 'signature', 'sig_html', 'sig_auto', 'rss_key', 'lang', 'skin', 'time_zone', 'time_dst', 'rte_enable', 'email_type' ),
-//                                                                             'us' => array( 'email_staff_enable', 'email_staff_user_approve', 'email_staff_ticket', 'email_staff_reply', 'email_staff_assign', 'email_staff_escalate', 'email_staff_hold', 'email_staff_move_to', 'email_staff_move_away', 'email_staff_close', 'email_staff_reopen', 'esn_unassigned', 'esn_assigned', 'esn_assigned_to_me', 'columns_tm', 'sort_tm', 'order_tm', 'dfilters_status', 'dfilters_depart', 'dfilters_priority', 'dfilters_flag', 'dfilters_assigned', 'auto_assign' ),
-//                                                                             'g' => 'all',
-//                                                                            ),
-//                                                       'from'        => array( 's' => 'asessions' ),
-//                                                       'join'        => array( array( 'from' => array( 'u' => 'users' ), 'where' => array( 's' => 's_uid', '=', 'u' => 'id' ) ), array( 'from' => array( 'us' => 'users_staff' ), 'where' => array( 's' => 's_uid', '=', 'us' => 'uid' ) ), array( 'from' => array( 'g' => 'groups' ), 'where' => array( 'g' => 'g_id', '=', 'u' => 'ugroup' ) ) ),
-//                                                        'where'    => array( array( 's' => 's_id' ), '=', $cookie_sid ),
-//                                                        'limit'    => array( 0, 1 ),
-//                                                 )     );
+              LEFT JOIN `td_groups` g ON ( g.`g_id` = u.`ugroup` ) WHERE s.`s_id` = :cookieId LIMIT 0,1;";
 
-            $this->trellis->db->execute($sql);
+            $user = $this->trellis->database->runSql($sql, [$cookie_sid])->fetch();
 
-            if ( $this->trellis->db->get_num_rows() )
+            if($user != null)
             {
-                $this->user = $this->trellis->db->fetch_row();
+                $this->user = $user;
 
                 if ( $this->user['s_time'] <= time() - ( $this->trellis->config['acp_session_timeout'] * 60 ) )
                 {
@@ -297,8 +286,7 @@ class td_class_asession {
             $time = time();
 
             $sql = "INSERT INTO `td_asessions` SET `s_id` = '$new_session', `s_uid` = '$memberID', 
-        `s_uname` = '$memberName', `s_ipadd` = '$IpAddress', `s_location` = '$location', `s_time` = '$time', `s_inticket` = '0', `s_messages` = '',
-        `s_email` = '';";
+        `s_uname` = '$memberName', `s_ipadd` = '$IpAddress', `s_location` = '$location', `s_time` = '$time', `s_inticket` = '0', `s_messages` = '';";
 //            $this->trellis->db->construct( array(
 //                                                       'insert'    => 'asessions',
 //                                                       'set'        => $db_array,
