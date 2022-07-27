@@ -615,24 +615,32 @@ class td_ad_home {
         # Grab Logs
         #=============================
         //work on this area
+        $sql = "SELECT l.*, u.name as uname FROM td_logs l LEFT JOIN td_users u ON l.uid = u.id WHERE l.admin = 1 
+                ORDER BY l.date desc, l.id desc
+                LIMIT 0, 5;";
 
-        $this->trellis->db->construct( array(
-                                                   'select'    => array(
-                                                                        'l' => 'all',
-                                                                        'u' => array( array( 'name' => 'uname' ) ),
-                                                                        ),
-                                                   'from'    => array( 'l' => 'logs' ),
-                                                   'join'    => array( array( 'from' => array( 'u' => 'users' ), 'where' => array( 'l' => 'uid', '=', 'u' => 'id' ) ) ),
-                                                   'where'    => array( array( 'l' => 'admin' ), '=', 1 ),
-                                                   'order'    => array( 'date' => array( 'l' => 'desc' ), 'id' => array( 'l' => 'desc' ) ),
-                                                   'limit'    => array( 0, 5 ),
-                                            )       );
+//        $this->trellis->db->construct( array(
+//                                                   'select'    => array(
+//                                                                        'l' => 'all',
+//                                                                        'u' => array( array( 'name' => 'uname' ) ),
+//                                                                        ),
+//                                                   'from'    => array( 'l' => 'logs' ),
+//                                                   'join'    => array( array( 'from' => array( 'u' => 'users' ), 'where' => array( 'l' => 'uid', '=', 'u' => 'id' ) ) ),
+//                                                   'where'    => array( array( 'l' => 'admin' ), '=', 1 ),
+//                                                   'order'    => array( 'date' => array( 'l' => 'desc' ), 'id' => array( 'l' => 'desc' ) ),
+//                                                   'limit'    => array( 0, 5 ),
+//                                            )       );
+//
+//        $this->trellis->db->execute();
 
-        $this->trellis->db->execute();
 
         $log_rows = "";
 
-        while( $l = $this->trellis->db->fetch_row() )
+
+        //while( $l = $this->trellis->db->fetch_row() )
+        $rows = $this->trellis->database->runSql($sql)->fetchAll(PDO::FETCH_ASSOC);
+        //while( $l =  )
+        foreach($rows as $l)
         {
             $l['date'] = $this->trellis->td_timestamp( array( 'time' => $l['date'], 'format' => 'short' ) );
 
@@ -691,7 +699,7 @@ class td_ad_home {
         # Sidebar Menu
         #=============================
 
-        $mysql_version = mysqli_get_server_info();
+        $mysql_version = $this->trellis->database->databaseVersion();//mysqli_get_server_info();
 
         if ( strpos( $mysql_version, '-' ) )
         {

@@ -24,4 +24,9 @@ class Database extends \PDO
         $statement->execute($arguments);
         return $statement;
     }
+
+    public function databaseVersion()
+    {
+        return $this->query('SELECT version()')->fetchColumn();
+    }
 }
