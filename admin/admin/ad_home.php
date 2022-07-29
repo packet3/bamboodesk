@@ -417,40 +417,13 @@ class td_ad_home {
         $sql_select['t'] = $sql_columns;
 
         $ticket_rows = '';
-        //CREATE SELECT STATEMENT
-
-        $sqlSelect = "SELECT ";
-        foreach($sql_columns as $column)
-        {
-            $sqlSelect .= "t.".$column .", ";
-        }
-        $sqlSelect = rtrim($sqlSelect, ", ");
-
-        $sqlJoin = "LEFT JOIN ";
-
-        if (count($sql_join) > 1) {
-            foreach($sql_join as $join)
-            {
-                $sqlJoin .= "td_".$join ." LEFT JOIN ";
-            }
-        } else {
-            $sqlJoin .= "td_".$sql_join[0];
-        }
-
-        $sqlJoin = rtrim($sqlJoin, " LEFT JOIN");
-
-        $sqlWhere = "WHERE ";
-        foreach($sql_where as $where)
-        {
-            $sqlWhere .= $where;
-        }
-
-        $sqlOrder = "ORDER BY ".$sql_sort_table.".".$sql_sort_field ." " .$sql_order;
-        $sqlLimit = "LIMIT ".$this->trellis->input['st']. " 8";
 
         //CREATE SQL QUERY
-        $sql = $sqlSelect ." FROM td_tickets t ". $sqlJoin ." ". $sqlWhere ." ". $sqlOrder ." ". $sqlLimit;
+        $sql = $this->trellis->database->createSQLString($sql_columns, $sql_where, $this->trellis->input['st']. " 8",
+                                                         $sql_sort_table,  $sql_sort_field, $sql_order, $sql_join);
+
         //$this->database->runSql($sql, [$this->input['q']])->fetchAll();
+
         $tickets = $this->trellis->database->runSql($sql)->fetchAll();
 
 

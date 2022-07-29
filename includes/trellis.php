@@ -83,7 +83,7 @@ class trellis {
         #=============================
         # Load Database - NEW WAY
         #=============================
-        $this->database = new \BambooDesk\Database($this->config['dsn'], $this->config['db_user'], $this->config['db_pass']);
+        $this->database = new \BambooDesk\Database($this->config['dsn'], $this->config['db_user'], $this->config['db_pass'], $this->config['db_prefix']);
 
         #=============================
         # Load Templates

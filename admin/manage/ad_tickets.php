@@ -306,35 +306,46 @@ class td_ad_tickets {
             if ( $name == 'department' )
             {
                 $sql_columns[] = 'did';
-                $sql_select['d'] = array( array( 'name' => 'dname' ) );
+                $sql_select[] = 'd.name as dname';
+                //$sql_select['d'] = array( array( 'name' => 'dname' ) );
+                $sql_join[] = 'departments d ON t.did = d.id';
 
-                $sql_join[] = array( 'from' => array( 'd' => 'departments' ), 'where' => array( 't' => 'did', '=', 'd' => 'id' ) );
+                //$sql_join[] = array( 'from' => array( 'd' => 'departments' ), 'where' => array( 't' => 'did', '=', 'd' => 'id' ) );
             }
             elseif ( $name == 'priority' )
             {
                 $sql_columns[] = 'priority';
-                $sql_select['p'] = array( array( 'name' => 'pname' ), 'icon_regular', 'icon_assigned' );
+                $sql_select[] = 'p.name as pname, p.icon_regular, p.icon_assigned';
+                //$sql_select['p'] = array( array( 'name' => 'pname' ), 'icon_regular', 'icon_assigned' );
 
-                $sql_join[] = array( 'from' => array( 'p' => 'priorities' ), 'where' => array( 't' => 'priority', '=', 'p' => 'id' ) );
+                $sql_join[] = 'priorities p ON t.priority = p.id';
+                //$sql_join[] = array( 'from' => array( 'p' => 'priorities' ), 'where' => array( 't' => 'priority', '=', 'p' => 'id' ) );
             }
             elseif ( $name == 'status' )
             {
                 $sql_columns[] = 'status';
-                $sql_select['s'] = array( 'name_staff', 'abbr_staff' );
+                $sql_select[] = 's.name_staff, s.abbr_staff';
+                //$sql_select['s'] = array( 'name_staff', 'abbr_staff' );
 
-                $sql_join[] = array( 'from' => array( 's' => 'statuses' ), 'where' => array( 't' => 'status', '=', 's' => 'id' ) );
+                $sql_join[] = 'statuses s ON t.status = s.id';
+                //$sql_join[] = array( 'from' => array( 's' => 'statuses' ), 'where' => array( 't' => 'status', '=', 's' => 'id' ) );
             }
             elseif ( $name == 'submitter' )
             {
-                $sql_select['u'][] = array( 'name' => 'uname' );
-                $sql_select['g'][] = 'gname';
+                //$sql_select['u'][] = array( 'name' => 'uname' );
+                //$sql_select['g'][] = 'gname';
+
+
+                $sql_select[] = 'g.gname, u.name as uname';
                 $sql_columns[] = 'email';
 
-                $sql_join[] = array( 'from' => array( 'g' => 'tickets_guests' ), 'where' => array( 't' => 'id', '=', 'g' => 'id' ) );
+                $sql_join[] = 'tickets_guests g ON t.id = g.id';
+                //$sql_join[] = array( 'from' => array( 'g' => 'tickets_guests' ), 'where' => array( 't' => 'id', '=', 'g' => 'id' ) );
 
                 if ( ! $user_table_join )
                 {
-                    $sql_join[] = array( 'from' => array( 'u' => 'users' ), 'where' => array( 't' => 'uid', '=', 'u' => 'id' ) );
+                    $sql_join[] = 'users u ON t.id = u.id';
+                    //$sql_join[] = array( 'from' => array( 'u' => 'users' ), 'where' => array( 't' => 'uid', '=', 'u' => 'id' ) );
 
                     $sql_columns[] = 'uid';
                 }
@@ -343,22 +354,28 @@ class td_ad_tickets {
             }
             elseif ( $name == 'lastuname' )
             {
-                $sql_select['ulr'] = array( array( 'name' => 'last_uname' ) );
-                $sql_select['g'][] = 'gname';
+//                $sql_select['ulr'] = array( array( 'name' => 'last_uname' ) );
+//                $sql_select['g'][] = 'gname';
+
+                $sql_select[] = 'g.gname, ulr.name as last_uname';
                 $sql_columns[] = 'email';
 
-                $sql_join[] = array( 'from' => array( 'g' => 'tickets_guests' ), 'where' => array( 't' => 'id', '=', 'g' => 'id' ) );
-                $sql_join[] = array( 'from' => array( 'ulr' => 'users' ), 'where' => array( 't' => 'last_uid', '=', 'ulr' => 'id' ) );
+                $sql_join[] = 'tickets_guests g ON t.id = g.id';
+                $sql_join[] = 'users ulr ON t.last_uid = ulr.id';
+                //$sql_join[] = array( 'from' => array( 'g' => 'tickets_guests' ), 'where' => array( 't' => 'id', '=', 'g' => 'id' ) );
+                //$sql_join[] = array( 'from' => array( 'ulr' => 'users' ), 'where' => array( 't' => 'last_uid', '=', 'ulr' => 'id' ) );
 
                 $sql_columns[] = 'last_uid';
             }
             elseif ( $name == 'uemail' )
             {
-                $sql_select['u'][] = array( 'email' => 'uemail' );
+                $sql_select[] = 'u.email AS uemail';
+                //$sql_select['u'][] = array( 'email' => 'uemail' );
 
                 if ( ! $user_table_join )
                 {
-                    $sql_join[] = array( 'from' => array( 'u' => 'users' ), 'where' => array( 't' => 'uid', '=', 'u' => 'id' ) );
+                    $sql_join[] = 'users u ON t.uid = u.id';
+                    //$sql_join[] = array( 'from' => array( 'u' => 'users' ), 'where' => array( 't' => 'uid', '=', 'u' => 'id' ) );
 
                     $sql_columns[] = 'uid';
                 }
@@ -367,15 +384,17 @@ class td_ad_tickets {
             }
             elseif ( strpos( $name, 'cfd' ) === 0 )
             {
-                $sql_select[ $name ] = array( array( 'data' => $name ) );
-
-                $sql_join[] = array( 'from' => array( $name => 'depart_fields_data' ), 'where' => array( array( 't' => 'id', '=', $name => 'tid' ), array( $name => 'fid', '=', substr( $name, 3 ) ) ) );
+                $sql_select[] = "$name.data AS $name";
+                //$sql_select[ $name ] = array( array( 'data' => $name ) );
+                $sql_join[] = "depart_fields_data $name ON t.id = $name.tid AND $name.fid =".substr( $name, 3 );
+                //$sql_join[] = array( 'from' => array( $name => 'depart_fields_data' ), 'where' => array( array( 't' => 'id', '=', $name => 'tid' ), array( $name => 'fid', '=', substr( $name, 3 ) ) ) );
             }
             elseif ( strpos( $name, 'cfp' ) === 0 )
             {
-                $sql_select[ $name ] = array( array( 'data' => $name ) );
-
-                $sql_join[] = array( 'from' => array( $name => 'profile_fields_data' ), 'where' => array( array( 't' => 'uid', '=', $name => 'uid' ), array( $name => 'fid', '=', substr( $name, 3 ) ) ) );
+                $sql_select[] = "$name.data AS $name";
+                //$sql_select[ $name ] = array( array( 'data' => $name ) );
+                $sql_join[] = "profile_fields_data $name ON t.uid = $name.uid AND $name.fid = ".substr( $name, 3 );
+                //$sql_join[] = array( 'from' => array( $name => 'profile_fields_data' ), 'where' => array( array( 't' => 'uid', '=', $name => 'uid' ), array( $name => 'fid', '=', substr( $name, 3 ) ) ) );
             }
             else
             {
@@ -435,13 +454,15 @@ class td_ad_tickets {
         $filters = array();
         $sql_where = array();
 
-        $sql_select['a'] = array( array( 'uid' => 'auid' ) ); // Get Assigned
+        $sql_select[] = 'a.uid AS auid'; // Get Assigned
+        //$sql_select['a'] = array( array( 'uid' => 'auid' ) ); // Get Assigned
 
         if ( $this->trellis->input['noguest'] )
         {
-            $filters[] = array( array( 't' => 'uid' ), '!=', 0 );
+            $filters[] = 't.uid != 0';
+            //$filters[] = array( array( 't' => 'uid' ), '!=', 0 );
         }
-
+        //CONTINUE FROM THIS
         if ( $this->trellis->input['assigned'] )
         {
             $sql_join[] = array( 'from' => array( 'a' => 'assign_map' ), 'where' => array( array( 't' => 'id', '=', 'a' => 'tid' ), array( $this->trellis->input['assigned'], '=', 'a' => 'uid', 'and' ) ) );
