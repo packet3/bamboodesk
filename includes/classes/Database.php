@@ -6,7 +6,7 @@ namespace BambooDesk;
 
 class Database extends \PDO
 {
-    private $_dbPrefix;
+    public $_dbPrefix;
     public function __construct(string $dsn, string $username, string $password, string $dbPrefix, array $options = [])
     {
         $default_options[\PDO::ATTR_DEFAULT_FETCH_MODE] = \PDO::FETCH_ASSOC;
@@ -27,43 +27,95 @@ class Database extends \PDO
         return $statement;
     }
 
-    public function createSQLString($selectColumns, $whereColumns = null, $limitBy = null, $orderByTable = null,
+    public function createSQLString($selectColumns, $fromTable, $whereColumns = null, $limitBy = null, $orderByTable = null,
                                     $orderByField = null,  $orderBy = null, $joinColumns = null)
     {
+        //SELECT
 
         $sqlSelect = "SELECT ";
-        foreach($selectColumns as $column)
-        {
-            $sqlSelect .= "t.".$column .", ";
-        }
-
-        $sqlSelect = rtrim($sqlSelect, ", ");
-
-        $sqlJoin = "LEFT JOIN ";
-
-        if (count($joinColumns) > 1) {
-            foreach($joinColumns as $join)
-            {
-                $sqlJoin .= $this->_dbPrefix.$join ." LEFT JOIN ";
+        if (is_array($selectColumns)) {
+            foreach ($selectColumns as $column) {
+                $sqlSelect .= $column . ", ";
             }
+
+            $sqlSelect = rtrim($sqlSelect, ", ");
         } else {
-            $sqlJoin .= $this->_dbPrefix.$joinColumns[0];
+            $sqlSelect .= $selectColumns;
         }
 
-        $sqlJoin = rtrim($sqlJoin, " LEFT JOIN");
+        $sqlString = $sqlSelect." FROM " .$this->_dbPrefix.$fromTable;
 
-        $sqlWhere = "WHERE ";
-        foreach($whereColumns as $where)
+        // JOIN STATEMENT
+
+        if ($joinColumns != null)
         {
-            $sqlWhere .= $where;
+            $sqlJoin = " LEFT JOIN ";
+
+            if (count($joinColumns) > 1) {
+                foreach($joinColumns as $join)
+                {
+                    $sqlJoin .= $this->_dbPrefix.$join ." LEFT JOIN ";
+                }
+            } else {
+                $sqlJoin .= $this->_dbPrefix.$joinColumns[0];
+            }
+
+            $sqlJoin = rtrim($sqlJoin, " LEFT JOIN");
+            $sqlString .= $sqlJoin;
         }
 
-        $sqlOrder = "ORDER BY ".$orderByTable.".".$orderByField ." " .$orderBy;
-        $sqlLimit = "LIMIT ".$limitBy;
+        //WHERE FILTERS
+        if ($whereColumns != null)
+        {
+            $sqlWhere = " WHERE ";
+            if(is_array($whereColumns))
+            {
+                foreach($whereColumns as $where)
+                {
+                    $sqlWhere .= $where;
+                }
+            } else {
+                $sqlWhere .= $whereColumns;
+            }
 
-        //CREATE SQL QUERY
-        return $sqlSelect ." FROM " .$this->_dbPrefix ."tickets t ". $sqlJoin ." ". $sqlWhere ." ". $sqlOrder ." ". $sqlLimit;
+            $sqlString .= $sqlWhere;
+        }
+
+        //ORDER BY
+        if($orderByTable != null)
+        {
+            $sqlOrder = " ORDER BY ".$orderByTable.".".$orderByField ." " .$orderBy;
+
+            $sqlString .= $sqlOrder;
+        }
+
+        //LIMIT
+        if($limitBy != null)
+        {
+            $sqlLimit = " LIMIT ".$limitBy;
+            $sqlString .= $sqlLimit;
+        }
+
+
+        //SQL STRING
+        return $sqlString.';';
     }
+
+    public function buildFilterString(array $items, string $filterType)
+    {
+        $sqlFilterString = $filterType.' (';
+        $filterItems = '';
+        foreach($items as $item)
+        {
+            $filterItems .= "'$item', ";
+        }
+
+        $sqlFilterString .= rtrim($filterItems, ", ");
+        $sqlFilterString .= ")";
+
+        return $sqlFilterString;
+    }
+
     public function databaseVersion()
     {
         return $this->query('SELECT version()')->fetchColumn();

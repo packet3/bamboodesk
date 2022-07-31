@@ -13,23 +13,31 @@ class td_func_attachments {
     # @ Get Attachments
     #=======================================
 
-    public function get($input)
+    public function get($ticketId)
     {
         $return = array();
+        $arguments['ticketId'] = $ticketId;
+        $sql = "SELECT id, original_name, size FROM attachments WHERE content_type = 'ticket' AND content_id = :ticketId";
 
-        $this->trellis->db->construct( array(
-                                                   'select'    => $input['select'],
-                                                   'from'    => 'attachments',
-                                                   'where'    => $input['where'],
-                                                   'order'    => $input['order'],
-                                                   'limit'    => $input['limit'],
-                                            )       );
 
-        $this->trellis->db->execute();
 
-        if ( ! $this->trellis->db->get_num_rows() ) return false;
 
-        while ( $a = $this->trellis->db->fetch_row() )
+//        $this->trellis->db->construct( array(
+//                                                   'select'    => $input['select'],
+//                                                   'from'    => 'attachments',
+//                                                   'where'    => $input['where'],
+//                                                   'order'    => $input['order'],
+//                                                   'limit'    => $input['limit'],
+//                                            )       );
+//
+//        $this->trellis->db->execute();
+        $rows = $this->trellis->database->runSql($sql, $arguments)->fetchAll();
+        if ( ! $rows)
+        {
+            return false;
+        }
+
+        while ( $a = $rows )
         {
             if ( $a['id'] )
             {
