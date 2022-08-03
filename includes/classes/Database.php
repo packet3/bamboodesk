@@ -27,6 +27,25 @@ class Database extends \PDO
         return $statement;
     }
 
+    public function generateInsertStatement(string $table, array $data)
+    {
+        $fields = '';
+        $values = '';
+
+        foreach($data as $field => $value)
+        {
+            $fields .= $field.',';
+            $values .= "'$value',";
+        }
+
+        $fields .= rtrim($fields, ", ");
+        $values .= rtrim($values, ", ");
+
+        $insertStatement = "INSERT INTO ".$this->_dbPrefix.$table." ($fields) VALUES ($values)";
+
+        return $insertStatement;
+    }
+
     public function createSQLString($selectColumns, $fromTable, $whereColumns = null, $limitBy = null, $orderByTable = null,
                                     $orderByField = null,  $orderBy = null, $joinColumns = null)
     {

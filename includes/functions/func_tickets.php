@@ -203,42 +203,49 @@ class td_func_tickets {
 
     public function add($data, $params=array())
     {
-        $fields = array(
-                        'mask'            => 'string',
-                        'did'            => 'int',
-                        'uid'            => 'int',
-                        'email'            => 'string',
-                        'subject'        => 'string',
-                        'priority'        => 'int',
-                        'message'        => 'string',
-                        'date'            => 'int',
-                        'last_reply'    => 'int',
-                        'last_uid'        => 'int',
-                        'notes'            => 'string',
-                        'status'        => 'int',
-                        'accepted'        => 'int',
-                        'ipadd'            => 'string',
-                        );
+//        $fields = array(
+//                        'mask'            => 'string',
+//                        'did'            => 'int',
+//                        'uid'            => 'int',
+//                        'email'            => 'string',
+//                        'subject'        => 'string',
+//                        'priority'        => 'int',
+//                        'message'        => 'string',
+//                        'date'            => 'int',
+//                        'last_reply'    => 'int',
+//                        'last_uid'        => 'int',
+//                        'notes'            => 'string',
+//                        'status'        => 'int',
+//                        'accepted'        => 'int',
+//                        'ipadd'            => 'string',
+//                        );
+//
+//        $this->trellis->db->construct( array(
+//                                                   'insert'    => 'tickets',
+//                                                   'set'    => $this->trellis->process_data( $fields, $data ),
+//                                            )       );
+//
+//        $this->trellis->db->execute();
+        //$data['mask'] = uniqid('T');
 
-        $this->trellis->db->construct( array(
-                                                   'insert'    => 'tickets',
-                                                   'set'    => $this->trellis->process_data( $fields, $data ),
-                                            )       );
+        //$sql = $this->trellis->database->generateInsertStatement('tickets', $data);
 
-        $this->trellis->db->execute();
+//        $id = $this->trellis->db->get_insert_id();
+//
+//        $mask = $this->generate_mask( $id );
+//
+//        $this->trellis->db->construct( array(
+//                                                   'update'    => 'tickets',
+//                                                   'set'    => array( 'mask' => $mask ),
+//                                                   'where'    => array( 'id', '=', $id ),
+//                                                   'limit'    => array( 1 ),
+//                                            )       );
 
-        $id = $this->trellis->db->get_insert_id();
+        //$this->trellis->db->execute();
+        //$this->trellis->database->runSql($sql);
 
-        $mask = $this->generate_mask( $id );
-
-        $this->trellis->db->construct( array(
-                                                   'update'    => 'tickets',
-                                                   'set'    => array( 'mask' => $mask ),
-                                                   'where'    => array( 'id', '=', $id ),
-                                                   'limit'    => array( 1 ),
-                                            )       );
-
-        $this->trellis->db->execute();
+        $addTicket = new \BambooDesk\Ticket($this->trellis->database);
+        $addTicket->create_ticket($data);
 
         if ( $data['uid'] )
         {

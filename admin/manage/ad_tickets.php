@@ -2994,28 +2994,46 @@ class td_ad_tickets {
         #=============================
         # Add Ticket
         #=============================
+        $ticket = [];
+        $ticket['did'] = $this->trellis->input['did'];
+        $ticket['uid'] = $u['id'];
+        $ticket['email'] = $u['email'];
+        $ticket['subject'] = $this->trellis->input['subject'];
+        $ticket['priority'] = $this->trellis->input['priority'];
+        $ticket['message'] = $this->trellis->input['message'];
+        $ticket['date'] = time();
+        $ticket['last_reply'] = time();
+        $ticket['last_uid'] = $u['id'];
+        $ticket['ipadd'] = $this->trellis->input['ip_address'];
+        $ticket['ipadd'] = $this->trellis->input['ip_address'];
+        $ticket['status'] = $this->trellis->cache->data['misc']['default_statuses'][2];
+        $ticket['accepted'] = 1;
+        //$ticket['name'] = $u['name'];
 
-        $db_array = array(
-                          'did'            => $this->trellis->input['did'],
-                          'uid'            => $u['id'],
-                          'email'        => $u['email'],
-                          'subject'        => $this->trellis->input['subject'],
-                          'priority'    => $this->trellis->input['priority'],
-                          'message'        => $this->trellis->input['message'],
-                          'date'        => time(),
-                          'last_reply'    => time(),
-                          'last_uid'    => $u['id'],
-                          'ipadd'        => $this->trellis->input['ip_address'],
-                          'status'        => $this->trellis->cache->data['misc']['default_statuses'][2],
-                          'accepted'    => 1,
-                          'uname'        => $u['name'],
-                         );
+//        $db_array = array(
+//                          'did'            => $this->trellis->input['did'],
+//                          'uid'            => $u['id'],
+//                          'email'        => $u['email'],
+//                          'subject'        => $this->trellis->input['subject'],
+//                          'priority'    => $this->trellis->input['priority'],
+//                          'message'        => $this->trellis->input['message'],
+//                          'date'        => time(),
+//                          'last_reply'    => time(),
+//                          'last_uid'    => $u['id'],
+//                          'ipadd'        => $this->trellis->input['ip_address'],
+//                          'status'        => $this->trellis->cache->data['misc']['default_statuses'][2],
+//                          'accepted'    => 1,
+//                          'name'        => $u['name'],
+//                         );
 
-        if ( ! $u['id'] )
-        {
-            $db_array['lang'] = $this->trellis->input['lang'];
-            $db_array['notify'] = $this->trellis->input['notify'];
-        }
+        //I'm not sure what the purpose of the below is? since the columns lang and notify dont exists in tickets table
+//        if ( ! $u['id'] )
+//        {
+//            $ticket['lang'] = $this->trellis->input['lang'];
+//            $ticket['notify'] = $this->trellis->input['notify'];
+//           $db_array['lang'] = $this->trellis->input['lang'];
+//           $db_array['notify'] = $this->trellis->input['notify'];
+//        }
 
         $this->trellis->load_functions('cdfields');
 
@@ -3024,7 +3042,8 @@ class td_ad_tickets {
             if ( $this->trellis->func->cdfields->required_field ) $this->add_ticket_step_2( 'no_field', $this->trellis->func->cdfields->required_field );
         }
 
-        $ticket_id = $this->trellis->func->tickets->add( $db_array );
+
+        $ticket_id = $this->trellis->func->tickets->add( $ticket );
 
         if ( $fdata ) $this->trellis->func->cdfields->set_data( $fdata, $ticket_id, 1, $u['id'] );
 
