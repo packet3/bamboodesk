@@ -7,7 +7,9 @@ class Ticket
     protected $db;
 
     public int $id;
+    public array $auto_assigned;
     public string $mask;
+
     public int $did;
     public int $uid;
     public string $email;
@@ -40,16 +42,22 @@ class Ticket
         $this->db = $db;
     }
 
-    public function create_ticket(array $ticket): bool
+    public function create_admin_ticket(array $ticket): bool
     {
         $ticket['mask'] = uniqid('T');
+        $this->mask = $ticket['mask'];
 
         try {
             $sql = "INSERT INTO " .$this->db->_dbPrefix."tickets (did, uid, email, subject, priority, message,
-                                                                date, last_reply, last_uid, ipadd, status, accepted, mask)
+                                                                date, last_reply, last_uid, ipadd, status, accepted, mask, name, lang, notify)
                                                           VALUES (:did, :uid, :email, :subject, :priority, :message,
-                                                                :date, :last_reply, :last_uid, :ipadd, :status, :accepted, :mask)";
+                                                                :date, :last_reply, :last_uid, :ipadd, :status, :accepted, :mask, :name, :lang, :notify)";
         $this->db->runSql($sql, $ticket);
+        $this->id = $this->db->lastInsertedId;
+
+        //When a Ticket is created some departments may want the ticket to be auto assigned
+        $auto
+
         return true;
         } catch (\PDOException $e) {
             if ($e->errorInfo[1] === 1062){
@@ -58,6 +66,135 @@ class Ticket
             throw $e;
         }
 
+
+    }
+
+    public function add_assignment($uid, $tid, $skip_check=0, $return_name=0, $no_email=0, $data=array())
+    {
+        # Not safe to use as shut down query
+        $data = [];
+
+        if ( ! $uid = intval( $uid ) ) return false;
+        if ( ! $tid = intval( $tid ) ) return false;
+
+        if ( ! $skip_check )
+        {
+            if ( $this->check_assignment( $uid, $tid ) ) return false;
+        }
+
+        if ( $return_name )
+        {
+            $data['id'] = $uid;
+            $data['offset'] = 0;
+            $data['row_count'] = 1;
+
+            $sql = "SELECT name FROM users WHERE id = :id LIMIT :offset, :row_count";
+            if (!count($this->db->runSql($sql, $data)->fetchAll()))
+            {
+                return false;
+            }
+
+            $result = $this->db->runSql($sql, $data)->fetch();
+
+        }
+
+        $data = [];
+        $data['tid'] = $tid;
+        $data['uid'] = $uid;
+
+        $sql = "INSERT INTO assign_map (tid, uid) VALUES (:tid, :uid)";
+        $this->db->runSql($sql, $data);
+
+        if ( ! $no_email )
+        {
+            $this->trellis->load_email();
+
+            $email_tags = array(
+                '{TICKET_ID}'        => $tid,
+                '{UNAME}'            => $data['uname'],
+                '{SUBJECT}'            => $data['subject'],
+                '{DEPARTMENT}'        => $this->trellis->cache->data['departs'][ $data['did'] ]['name'],
+                '{PRIORITY}'        => $this->trellis->cache->data['priorities'][ $data['priority'] ]['name'],
+                '{MESSAGE}'            => $this->trellis->prepare_email( $data['message'], 0, 'plain' ),
+                '{MESSAGE_HTML}'    => $this->trellis->prepare_email( $data['message'], 0, 'html' ),
+                '{LINK}'            => $this->trellis->config['hd_url'] .'/admin.php?section=manage&page=tickets&act=view&id='. $tid,
+                '%7BLINK%7D'        => $this->trellis->config['hd_url'] .'/admin.php?section=manage&page=tickets&act=view&id='. $tid,
+                '{ACTION_USER}'        => $this->trellis->user['name'],
+            );
+
+            if ( $uid != $this->trellis->user['id'] ) $this->trellis->email->send_email( array( 'to' => $uid, 'msg' => 'ticket_assign_staff', 'replace' => $email_tags, 'type' => 'staff_assign', 'type_staff' => 'assign' ) );
+        }
+        if ( $return_name )
+        {
+            return $result['name'];
+        }
+        else
+        {
+            return true;
+        }
+
+    }
+
+    public function check_assignment($uid, $tid) : int
+    {
+        if ( ! $uid = intval( $uid ) ) return false;
+        if ( ! $tid = intval( $tid ) ) return false;
+
+        $data = [];
+        $data['tid'] = $tid;
+        $data['uid'] = $uid;
+        $data['offset'] = 0;
+        $data['row_count'] = 1;
+
+        $sql = "SELECT id FROM assign_map WHERE tid = :tid AND uid = :uid";
+        return count($this->db->runSql($sql, $data)->fetchAll());
+
+    }
+
+    public function set_auto_assigned($assigned)
+    {
+        if ( ! is_array( $assigned ) ) return false;
+
+        $this->auto_assigned = $assigned;
+    }
+
+    public function clear_auto_assigned()
+    {
+        $this->auto_assigned = array();
+    }
+
+    public function increment_department_tickets_count(int $departmentId)
+    {
+        $data = [];
+        $data['id'] = $departmentId;
+
+
+        $sql = "SELECT tickets_total FROM departments WHERE id = :id";
+        $totalTicketsDept = $this->db->runSql($sql, $data)->fetchColumn();
+
+        $data['total'] = $totalTicketsDept + 1;
+
+        $sql = "UPDATE departments SET tickets_total = :total WHERE id = :id";
+        $this->db->runSql($sql, $data);
+
+    }
+
+    public function increment_user_tickets_count(int $userId)
+    {
+        $data = [];
+        $data['id'] = $userId;
+
+        $sql = "SELECT tickets_total, tickets_open FROM users WHERE id =:id";
+        $statement = $this->db->runSql($sql, $data);
+
+        $ticketsCurrentTotal = $statement->fetchColumn();
+        $ticketsCurrentOpen = $statement->fetchColumn(1);
+
+        $data['tickets_total'] = $ticketsCurrentTotal;
+        $data['tickets_open'] = $ticketsCurrentOpen;
+
+        $sql = "UPDATE users SET tickets_total = :tickets_total, tickets_open = :tickets_open WHERE id = :id";
+        $this->db->runSql($sql, $data);
 
     }
 

@@ -3008,7 +3008,9 @@ class td_ad_tickets {
         $ticket['ipadd'] = $this->trellis->input['ip_address'];
         $ticket['status'] = $this->trellis->cache->data['misc']['default_statuses'][2];
         $ticket['accepted'] = 1;
-        //$ticket['name'] = $u['name'];
+        $ticket['name'] = $u['name'];
+        $ticket['lang'] = $this->trellis->input['lang'];
+        $ticket['notify'] = $this->trellis->input['notify'];
 
 //        $db_array = array(
 //                          'did'            => $this->trellis->input['did'],

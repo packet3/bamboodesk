@@ -7,6 +7,7 @@ namespace BambooDesk;
 class Database extends \PDO
 {
     public $_dbPrefix;
+    public $lastInsertedId;
     public function __construct(string $dsn, string $username, string $password, string $dbPrefix, array $options = [])
     {
         $default_options[\PDO::ATTR_DEFAULT_FETCH_MODE] = \PDO::FETCH_ASSOC;
@@ -24,6 +25,7 @@ class Database extends \PDO
         }
         $statement = $this->prepare($sql);
         $statement->execute($arguments);
+        $this->lastInsertedId = $this->lastInsertId();
         return $statement;
     }
 
