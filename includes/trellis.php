@@ -298,12 +298,15 @@ class trellis {
 
             foreach ( $config as $id => $c )
             {
-                if ( $id != 'transport' || $id != 'smtp_encryption' ) $config[ $id ] = $this->prepare_output( $c, array( 'html' => 1, 'entity' => 1 ) );
+                if ( $id != 'transport' || $id != 'smtp_encryption' )
+                {
+                    $config[ $id ] = $this->prepare_output( $c, array( 'html' => 1, 'entity' => 1 ) );
+                }
             }
 
             if ( $test ) $config['test'] = $test;
 
-            $this->email = new td_class_email( $this, $config );
+            //$this->email = new td_class_email( $this, $config );
         }
     }
 
@@ -565,8 +568,6 @@ class trellis {
     function prepare_output($data, $params=array())
     {
         # FIXME: HTMLPurifier could have some performance / memory issues.  Can we cache our of configs so we don't have so many config objects?  Same with purifier objects? CONFIGS NOW CACHED. 50% PERFORMANCE IMPROVEMENT. :)
-
-        if ( ! $this->htmlpurifier ) require_once TD_INC .'htmlpurifier/HTMLPurifier.standalone.php';
 
         $key = base64_encode( serialize( array( 'html' => $params['html'], 'paragraphs' => $params['paragraphs'], 'linkify' => $params['linkify'] ) ) );
 

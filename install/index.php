@@ -284,7 +284,7 @@ class td_install {
         }
 
         $check_perms = array(
-                             array( 'title' => 'Cache Folders', 'path' => $this->trellis->config['cache_path'], 'check' => array( $this->trellis->config['cache_path'] .'htmlpurifier', $this->trellis->config['cache_path'] .'trellis' ) ),
+                             array( 'title' => 'Cache Folders', 'path' => $this->trellis->config['cache_path'], 'check' => array( $this->trellis->config['cache_path'] .'htmlpurifier_old', $this->trellis->config['cache_path'] .'trellis' ) ),
                              array( 'title' => 'Data Folder', 'path' => $this->trellis->config['data_path'] ),
                              array( 'title' => 'Languages Folder', 'path' => TD_PATH .'languages/' ),
                              array( 'title' => 'Logs Folder', 'path' => $this->trellis->config['logs_path'] ),

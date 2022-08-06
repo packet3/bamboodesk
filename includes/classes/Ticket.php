@@ -41,7 +41,16 @@ class Ticket
     {
         $this->db = $db;
     }
+    public function prepare_ticket_notification(array $template_data) :string
+    {
+        $ticketId = $template_data['ticket_id'];
+        $ticketLink = $template_data['ticket_link'];
 
+        $html = "Your ticket was sucessfully submitted your ticket id is: <b>$ticketId</b> you can view the ticket at this link
+                <a href='$ticketLink'>View Ticket</a>";
+
+        return $html;
+    }
     public function create_admin_ticket(array $ticket): bool
     {
         $ticket['mask'] = uniqid('T');
@@ -55,8 +64,14 @@ class Ticket
         $this->db->runSql($sql, $ticket);
         $this->id = $this->db->lastInsertedId;
 
-        //When a Ticket is created some departments may want the ticket to be auto assigned
-        $auto
+        //Increment Department tickets count.
+        $this->increment_department_tickets_count($ticket['did']);
+
+        //Increment User Ticket Count.
+        if($ticket['uid'])
+        {
+          $this->increment_user_tickets_count($ticket['uid']);
+        }
 
         return true;
         } catch (\PDOException $e) {
@@ -68,6 +83,7 @@ class Ticket
 
 
     }
+
 
     public function add_assignment($uid, $tid, $skip_check=0, $return_name=0, $no_email=0, $data=array())
     {
@@ -151,17 +167,6 @@ class Ticket
 
     }
 
-    public function set_auto_assigned($assigned)
-    {
-        if ( ! is_array( $assigned ) ) return false;
-
-        $this->auto_assigned = $assigned;
-    }
-
-    public function clear_auto_assigned()
-    {
-        $this->auto_assigned = array();
-    }
 
     public function increment_department_tickets_count(int $departmentId)
     {
@@ -197,10 +202,5 @@ class Ticket
         $this->db->runSql($sql, $data);
 
     }
-
-
-
-
-
 
 }

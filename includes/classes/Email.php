@@ -125,40 +125,49 @@ class Email
         return $sent;
     }
 
-    public function send_email(array $params) :bool
+    public function prepare_email(string $message) : string
     {
-        //if ( ! $this->trellis->cache->data['settings']['email']['enable'] ) return true;
-        if ( $params['type_user'] ) return true;
-        if ( $params['type_staff']) return true;
+        $purifier               = new \HTMLPurifier();                     // Create Purifier
+        $purifier->config->set('HTML.Allowed', 'p,br,b,i,a[href],img[src|alt]'); // Allowed
+        return $purifier->purify($message); // Purify content
+    }
 
-        #=============================
-        # Add Lookup User
-        #=============================
+    public function send_email(array $params)
+    {
+        $mail = new PHPMailer(true);
 
-        if ( ! $params['to'] )
-        {
-            trigger_error( "Email - Recipient not specified", E_USER_NOTICE );
+        try {
+            //Server settings
+            $mail->SMTPDebug = SMTP::DEBUG_SERVER;                      //Enable verbose debug output
+            $mail->isSMTP();                                            //Send using SMTP
+            $mail->Host       = $this->config['smtp_host'];                     //Set the SMTP server to send through
+            $mail->SMTPAuth   = $this->config['enable_smtp_auth'];                                   //Enable SMTP authentication
+            $mail->Username   = $this->config['smtp_username'];                     //SMTP username
+            $mail->Password   = $this->config['smtp_password'];                               //SMTP password
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;            //Enable implicit TLS encryption
+            $mail->Port       = $this->config['smtp_port'];                                    //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
 
-            return false;
+            //Recipients
+            $mail->setFrom($this->config['sent_from_email'], 'Mailer');
+            //$mail->addAddress('joe@example.net', 'Joe User');     //Add a recipient
+            $mail->addAddress($params['send_to']);               //Name is optional
+            //$mail->addReplyTo('info@example.com', 'Information');
+
+            //Attachments
+            //$mail->addAttachment('/var/tmp/file.tar.gz');         //Add attachments
+            //$mail->addAttachment('/tmp/image.jpg', 'new.jpg');    //Optional name
+
+            //Content
+            $mail->isHTML(true);                                  //Set email format to HTML
+            $mail->Subject = $params['message_subject'];
+            $mail->Body    = $params['message_body'];
+            //$mail->AltBody = 'This is the body in plain text for non-HTML mail clients';
+
+            $mail->send();
+            echo 'Message has been sent';
+        } catch (Exception $e) {
+            echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
         }
-
-        if ( ! $params['msg'] )
-        {
-            trigger_error( "Email - Message not specified", E_USER_NOTICE );
-
-            return false;
-        }
-
-        if ( is_numeric( $params['to'] ) )
-        {
-            $this->to_send[ ++$this->to_send_id ] = array( 'id' => $params['to'], 'email' => $params['email'], 'name' => $params['name'], 'msg' => $params['msg'], 'from' => $params['from'], 'replace' => $params['replace'], 'lang' => $params['lang'], 'override' => $params['override'], 'format' => $params['format'], 'type' => $params['type'] );
-        }
-        else
-        {
-            $this->to_send[ ++$this->to_send_id ] = array( 'email' => $params['to'], 'name' => $params['name'], 'msg' => $params['msg'], 'from' => $params['from'], 'replace' => $params['replace'], 'lang' => $params['lang'], 'override' => $params['override'], 'format' => $params['format'], 'type' => $params['type'] );
-        }
-
-        return true;
     }
 
 }
