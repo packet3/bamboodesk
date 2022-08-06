@@ -180,22 +180,22 @@ class td_func_tickets {
     # @ Check For Ticket Assignment
     #=======================================
 
-    public function check_assignment($uid, $tid)
-    {
-        if ( ! $uid = intval( $uid ) ) return false;
-        if ( ! $tid = intval( $tid ) ) return false;
-
-        $this->trellis->db->construct( array(
-                                                   'select'    => array( 'id' ),
-                                                   'from'    => 'assign_map',
-                                                   'where'    => array( array( 'tid', '=', $tid ), array( 'uid', '=', $uid, 'and' ) ),
-                                                   'limit'    => array( 0, 1 ),
-                                            )       );
-
-        $this->trellis->db->execute();
-
-        return $this->trellis->db->get_num_rows();
-    }
+//    public function check_assignment($uid, $tid)
+//    {
+//        if ( ! $uid = intval( $uid ) ) return false;
+//        if ( ! $tid = intval( $tid ) ) return false;
+//
+//        $this->trellis->db->construct( array(
+//                                                   'select'    => array( 'id' ),
+//                                                   'from'    => 'assign_map',
+//                                                   'where'    => array( array( 'tid', '=', $tid ), array( 'uid', '=', $uid, 'and' ) ),
+//                                                   'limit'    => array( 0, 1 ),
+//                                            )       );
+//
+//        $this->trellis->db->execute();
+//
+//        return $this->trellis->db->get_num_rows();
+//    }
 
     #=======================================
     # @ Add Ticket
@@ -203,176 +203,63 @@ class td_func_tickets {
 
     public function add($data, $params=array())
     {
-        $fields = array(
-                        'mask'            => 'string',
-                        'did'            => 'int',
-                        'uid'            => 'int',
-                        'email'            => 'string',
-                        'subject'        => 'string',
-                        'priority'        => 'int',
-                        'message'        => 'string',
-                        'date'            => 'int',
-                        'last_reply'    => 'int',
-                        'last_uid'        => 'int',
-                        'notes'            => 'string',
-                        'status'        => 'int',
-                        'accepted'        => 'int',
-                        'ipadd'            => 'string',
-                        );
 
-        $this->trellis->db->construct( array(
-                                                   'insert'    => 'tickets',
-                                                   'set'    => $this->trellis->process_data( $fields, $data ),
-                                            )       );
+        $addTicket = new \BambooDesk\Ticket($this->trellis->database);
+        $result = $addTicket->create_admin_ticket($data);
 
-        $this->trellis->db->execute();
-
-        $id = $this->trellis->db->get_insert_id();
-
-        $mask = $this->generate_mask( $id );
-
-        $this->trellis->db->construct( array(
-                                                   'update'    => 'tickets',
-                                                   'set'    => array( 'mask' => $mask ),
-                                                   'where'    => array( 'id', '=', $id ),
-                                                   'limit'    => array( 1 ),
-                                            )       );
-
-        $this->trellis->db->execute();
-
-        if ( $data['uid'] )
+        if($result)
         {
-            $this->key = '';
-        }
-        else
-        {
-            $fields = array(
-                'id'        => 'int',
-                'gname'        => 'string',
-                'key'        => 'string',
-                'lang'        => 'int',
-                'notify'    => 'int',
-            );
+            // Email Notifications
+            $emailData = [];
+            $emailData['ticket_id'] = $this->key;
+            $emailData['ticket_link'] = $this->trellis->config['hd_url'] .'/index.php?page=tickets&act=view&id='. $addTicket->mask;
+            $message = $addTicket->prepare_ticket_notification($emailData);
 
-            $gdata = array(
-                'id'        => $id,
-                'gname'     => $data['uname'],
-                'key'        => substr( md5( uniqid() . $data['email'] ), 0, 10 ),
-                'lang'         => $data['lang'],
-                'notify'     => $data['notify'],
-            );
 
-            $this->trellis->db->construct( array(
-                'insert'    => 'tickets_guests',
-                'set'        => $this->trellis->process_data( $fields, $gdata ),
-            ) );
+            $ticketEmail = new \BambooDesk\Email($this->trellis->config,$this->trellis->database, $this->trellis);
+            $ticketUser = new \BambooDesk\User($this->trellis->database);
+            $messageBody = $ticketEmail->prepare_email($message);
 
-            $this->trellis->db->execute();
+            $emailData['message_subject'] = "Ticket (" .$addTicket->mask. ") Submitted, Thank you.";
+            $emailData['message_body'] = $messageBody;
 
-            $this->key = $gdata['key'];
-        }
-
-        $assign_auto = unserialize( $this->trellis->cache->data['departs'][ $data['did'] ]['assign_auto'] );
-
-        $assigned = array();
-        $assigned_log = array();
-
-        if ( ! empty( $assign_auto ) )
-        {
-            foreach( $assign_auto as $uid )
+            $userId = $data['uid'];
+            $result = $ticketUser->fetch_user_email_by_id($userId);
+            if($result)
             {
-                $assigned_log[ $uid ] = $this->add_assignment( $uid, $id, 1, 1, 1 );
-
-                $assigned[ $uid ] = 1;
+                $emailData['send_to'] = $ticketUser->userEmail; //set from above
+            } else {
+                $emailData['send_to'] = "nosuchemail@test.com";
             }
 
-            $this->set_auto_assigned( $assigned_log );
-        }
-        else
-        {
-            $this->clear_auto_assigned();
-        }
-
-        // increment department tickets count
-        $this->trellis->db->construct( array(
-            'update'    => 'departments',
-            'set'        => array( 'tickets_total' => array( '+', 1 ) ),
-            'where'        => array( 'id', '=', $data['did'] ),
-            'limit'        => array( 1 ),
-        ) );
-
-        $this->trellis->db->next_shutdown();
-        $this->trellis->db->execute();
-
-        if ( $data['uid'] )
-        {
-            // increment user tickets count
-            $this->trellis->db->construct( array(
-                'update'    => 'users',
-                'set'        => array( 'tickets_total' => array( '+', 1 ), 'tickets_open' => array( '+', 1 ) ),
-                'where'        => array( 'id', '=', $data['uid'] ),
-                'limit'        => array( 1 ),
-            ) );
+            //send the email
+            $ticketEmail->send_email($emailData);
+        } else {
+            echo "Issue creating ticket";
         }
 
-        $this->trellis->db->next_shutdown();
-        $this->trellis->db->execute();
 
-        // Email Notifications
-        $this->trellis->load_email();
 
-        $email_tags = array(
-                            '{TICKET_ID}'        => $mask,
-                            '{KEY}'                => $this->key,
-                            '{UNAME}'            => $data['uname'],
-                            '{SUBJECT}'            => $data['subject'],
-                            '{DEPARTMENT}'        => $this->trellis->cache->data['departs'][ $data['did'] ]['name'],
-                            '{PRIORITY}'        => $this->trellis->cache->data['priorities'][ $data['priority'] ]['name'],
-                            '{MESSAGE}'            => $this->trellis->prepare_email( $data['message'], 0, 'plain' ),
-                            '{MESSAGE_HTML}'    => $this->trellis->prepare_email( $data['message'], 0, 'html' ),
-                            '{LINK}'            => $this->trellis->config['hd_url'] .'/index.php?page=tickets&act=view&id='. $mask,
-                            '%7BLINK%7D'        => $this->trellis->config['hd_url'] .'/index.php?page=tickets&act=view&id='. $mask, # CHECK: we have to do this cause HTMLPurifier urlencodes our brackets {} maybe use _ instead of {
-                            '{ACTION_USER}'        => $this->trellis->user['name'],
-                            );
-
-        // Hide Staff Name
-        if ( $this->trellis->user['g_acp_access'] && $this->trellis->user['g_hide_names'] ) $email_tags['{ACTION_USER}'] = $this->trellis->user['g_name'];
-
-        if ( $data['uid'] )
-        {
-            if ( $data['uid'] == $this->trellis->user['id'] )
-            {
-                $this->trellis->email->send_email( array( 'to' => $data['uid'], 'msg' => 'ticket_new', 'replace' => $email_tags, 'type' => 'ticket', 'type_user' => 'ticket' ) );
-            }
-            else
-            {
-                $this->trellis->email->send_email( array( 'to' => $data['uid'], 'msg' => 'ticket_new_behalf', 'replace' => $email_tags, 'type' => 'ticket', 'type_user' => 'ticket' ) );
-            }
-        }
-        else
-        {
-            if ( $data['notify'] ) $this->trellis->email->send_email( array( 'to' => $data['email'], 'name' => $data['uname'], 'msg' => 'ticket_new_guest_behalf', 'replace' => $email_tags, 'type' => 'ticket', 'type_user' => 'ticket', 'lang' => $data['lang'] ) );
-        }
-
-        $email_tags['{TICKET_ID}'] = $id;
-        $email_tags['{LINK}'] = $this->trellis->config['hd_url'] .'/admin.php?section=manage&page=tickets&act=view&id='. $id;
-        $email_tags['%7BLINK%7D'] = $this->trellis->config['hd_url'] .'/admin.php?section=manage&page=tickets&act=view&id='. $id;
-
-        // Restore Staff Name for Staff Notifications
-        if ( $this->trellis->user['g_acp_access'] && $this->trellis->user['g_hide_names'] ) $email_tags['{ACTION_USER}'] = $this->trellis->user['name'];
-
-        $this->trellis->email->notify_staff( array( 'msg' => 'ticket_new'. ( ( ! $data['uid'] ) ? '_guest' : '' ), 'replace' => $email_tags, 'type' => 'ticket', 'tid' => $id, 'did' => $data['did'], 'assigned' => $assigned, 'exclude' => $this->trellis->user['id'] ) );
-
-        #TODO: update depart, user, stats, send emails, feed, etc
-
-        if ( $params['return'] == 'mask' )
-        {
-            return array( 'id' => $id, 'mask' => $mask );
-        }
-        else
-        {
-            return $id;
-        }
+//
+//        $email_tags['{TICKET_ID}'] = $addTicket->id;
+//        $email_tags['{LINK}'] = $this->trellis->config['hd_url'] .'/admin.php?section=manage&page=tickets&act=view&id='. $addTicket->id;
+//        $email_tags['%7BLINK%7D'] = $this->trellis->config['hd_url'] .'/admin.php?section=manage&page=tickets&act=view&id='. $addTicket->id;
+//
+//        // Restore Staff Name for Staff Notifications
+//        if ( $this->trellis->user['g_acp_access'] && $this->trellis->user['g_hide_names'] ) $email_tags['{ACTION_USER}'] = $this->trellis->user['name'];
+//
+//        $ticketEmail->notify_staff( array( 'msg' => 'ticket_new'. ( ( ! $data['uid'] ) ? '_guest' : '' ), 'replace' => $email_tags, 'type' => 'ticket', 'tid' => $addTicket->id, 'did' => $data['did'], 'assigned' => $assigned, 'exclude' => $this->trellis->user['id'] ) );
+//
+//        #TODO: update depart, user, stats, send emails, feed, etc
+//
+//        if ( $params['return'] == 'mask' )
+//        {
+//            return array( 'id' => $id, 'mask' => $mask );
+//        }
+//        else
+//        {
+//            return $id;
+//        }
     }
 
     #=======================================
@@ -1822,21 +1709,21 @@ class td_func_tickets {
     # @ Set Auto Assigned
     #=======================================
 
-    public function set_auto_assigned($assigned)
-    {
-        if ( ! is_array( $assigned ) ) return false;
-
-        $this->auto_assigned = $assigned;
-    }
+//    public function set_auto_assigned($assigned)
+//    {
+//        if ( ! is_array( $assigned ) ) return false;
+//
+//        $this->auto_assigned = $assigned;
+//    }
 
     #=======================================
     # @ Clear Auto Assigned
     #=======================================
 
-    public function clear_auto_assigned()
-    {
-        $this->auto_assigned = array();
-    }
+//    public function clear_auto_assigned()
+//    {
+//        $this->auto_assigned = array();
+//    }
 
     #=======================================
     # @ Get Auto Assigned
