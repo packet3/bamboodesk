@@ -201,35 +201,47 @@ class td_func_tickets {
     # @ Add Ticket
     #=======================================
 
-    public function add($data, $params=array())
+    public function add($data)
     {
 
-        $addTicket = new \BambooDesk\Ticket($this->trellis->database);
+        $addTicket = new \BambooDesk\Ticket($this->trellis->database, $this->trellis->user);
+        $ticketDepartment = new \BambooDesk\Department($this->trellis->database);
+
         $result = $addTicket->create_admin_ticket($data);
 
-        if($result)
+        $insertedTicketId = $addTicket->id; //assigned during creating ticket
+
+        if($result && $data['notify'] ==  1)
         {
             // Email Notifications
             $emailData = [];
-            $emailData['ticket_id'] = $this->key;
+            $emailData['ticket_id'] = $addTicket->mask;
             $emailData['ticket_link'] = $this->trellis->config['hd_url'] .'/index.php?page=tickets&act=view&id='. $addTicket->mask;
+            $emailData['department_name'] = $ticketDepartment->fetch_department_name_by_ticket_id($insertedTicketId);
+            $emailData['priority_level'] = $addTicket->fetch_ticket_priorty_level($insertedTicketId);
+            $emailData['subject'] = $data['subject'];
+            $emailData['ticket_message'] =  $data['message'];
+            $emailData['person_name'] = $data['name'];
+
             $message = $addTicket->prepare_ticket_notification($emailData);
 
 
             $ticketEmail = new \BambooDesk\Email($this->trellis->config,$this->trellis->database, $this->trellis);
             $ticketUser = new \BambooDesk\User($this->trellis->database);
+
             $messageBody = $ticketEmail->prepare_email($message);
 
-            $emailData['message_subject'] = "Ticket (" .$addTicket->mask. ") Submitted, Thank you.";
+            $emailData['message_subject'] = "Ticket ID: " .$addTicket->mask;
             $emailData['message_body'] = $messageBody;
 
             $userId = $data['uid'];
             $result = $ticketUser->fetch_user_email_by_id($userId);
+
             if($result)
             {
                 $emailData['send_to'] = $ticketUser->userEmail; //set from above
             } else {
-                $emailData['send_to'] = "nosuchemail@test.com";
+                $emailData['send_to'] = $data['email']; //this will need to be email provided in form.
             }
 
             //send the email
@@ -238,28 +250,9 @@ class td_func_tickets {
             echo "Issue creating ticket";
         }
 
+        #TODO: Staff Notifications???
 
-
-//
-//        $email_tags['{TICKET_ID}'] = $addTicket->id;
-//        $email_tags['{LINK}'] = $this->trellis->config['hd_url'] .'/admin.php?section=manage&page=tickets&act=view&id='. $addTicket->id;
-//        $email_tags['%7BLINK%7D'] = $this->trellis->config['hd_url'] .'/admin.php?section=manage&page=tickets&act=view&id='. $addTicket->id;
-//
-//        // Restore Staff Name for Staff Notifications
-//        if ( $this->trellis->user['g_acp_access'] && $this->trellis->user['g_hide_names'] ) $email_tags['{ACTION_USER}'] = $this->trellis->user['name'];
-//
-//        $ticketEmail->notify_staff( array( 'msg' => 'ticket_new'. ( ( ! $data['uid'] ) ? '_guest' : '' ), 'replace' => $email_tags, 'type' => 'ticket', 'tid' => $addTicket->id, 'did' => $data['did'], 'assigned' => $assigned, 'exclude' => $this->trellis->user['id'] ) );
-//
-//        #TODO: update depart, user, stats, send emails, feed, etc
-//
-//        if ( $params['return'] == 'mask' )
-//        {
-//            return array( 'id' => $id, 'mask' => $mask );
-//        }
-//        else
-//        {
-//            return $id;
-//        }
+        return $insertedTicketId;
     }
 
     #=======================================

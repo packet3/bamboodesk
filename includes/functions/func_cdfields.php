@@ -182,7 +182,10 @@ class td_func_cdfields {
     {
         $return = array();
 
-        $this->trellis->db->construct( array(
+        $data = [];
+        $data['ticket_id'] = $tid;
+
+         $this->trellis->db->construct( array(
                                                    'select'    => array( 'fid', 'data', 'extra' ),
                                                    'from'    => 'depart_fields_data',
                                                    'where'    => array( 'tid', '=', $tid ),

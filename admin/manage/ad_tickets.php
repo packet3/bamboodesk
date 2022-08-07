@@ -9,9 +9,17 @@
 
 class td_ad_tickets {
 
+
+
     private $output = "";
     private $assigned_override = array();
     private $parsed_sigs;
+    private $attachement;
+    private $log;
+    private $ticket;
+
+
+
 
     #=======================================
     # @ Auto Run
@@ -19,6 +27,12 @@ class td_ad_tickets {
 
     public function auto_run()
     {
+
+        //Instantiate Needed Classes
+       $this->attachment = new \BambooDesk\Attachment($this->trellis->database);
+        $this->log = new \BambooDesk\Log($this->trellis->database, $this->trellis->settings, $this->trellis->lang, $this->trellis->user);
+        $this->ticket = new \BambooDesk\Ticket($this->trellis->database, $this->trellis->user);
+
         $this->trellis->load_functions('tickets');
         $this->trellis->load_lang('tickets');
 
@@ -3012,62 +3026,22 @@ class td_ad_tickets {
         $ticket['lang'] = $this->trellis->input['lang'];
         $ticket['notify'] = $this->trellis->input['notify'];
 
-//        $db_array = array(
-//                          'did'            => $this->trellis->input['did'],
-//                          'uid'            => $u['id'],
-//                          'email'        => $u['email'],
-//                          'subject'        => $this->trellis->input['subject'],
-//                          'priority'    => $this->trellis->input['priority'],
-//                          'message'        => $this->trellis->input['message'],
-//                          'date'        => time(),
-//                          'last_reply'    => time(),
-//                          'last_uid'    => $u['id'],
-//                          'ipadd'        => $this->trellis->input['ip_address'],
-//                          'status'        => $this->trellis->cache->data['misc']['default_statuses'][2],
-//                          'accepted'    => 1,
-//                          'name'        => $u['name'],
-//                         );
-
-        //I'm not sure what the purpose of the below is? since the columns lang and notify dont exists in tickets table
-//        if ( ! $u['id'] )
-//        {
-//            $ticket['lang'] = $this->trellis->input['lang'];
-//            $ticket['notify'] = $this->trellis->input['notify'];
-//           $db_array['lang'] = $this->trellis->input['lang'];
-//           $db_array['notify'] = $this->trellis->input['notify'];
-//        }
-
-        $this->trellis->load_functions('cdfields');
-
-        if( ! $fdata = $this->trellis->func->cdfields->process_input( $this->trellis->input['did'] ) )
-        {
-            if ( $this->trellis->func->cdfields->required_field ) $this->add_ticket_step_2( 'no_field', $this->trellis->func->cdfields->required_field );
-        }
-
-
+        //Maybe Move this
         $ticket_id = $this->trellis->func->tickets->add( $ticket );
 
-        if ( $fdata ) $this->trellis->func->cdfields->set_data( $fdata, $ticket_id, 1, $u['id'] );
-
-        $this->trellis->log( array( 'msg' => array( 'ticket_added', $this->trellis->input['subject'] ), 'type' => 'ticket', 'content_type' => 'ticket', 'content_id' => $ticket_id ) );
-
-        if ( $assigned = $this->trellis->func->tickets->get_auto_assigned() )
-        {
-            foreach ( $assigned as $aid => &$aname )
-            {
-                $this->trellis->log( array( 'msg' => array( 'ticket_assignaddatuo', $aname, $this->trellis->input['subject'] ), 'type' => 'ticket', 'content_type' => 'ticket', 'content_id' => $ticket_id ) );
-            }
-        }
 
         #=============================
         # Assign Attachments
         #=============================
 
+
+
         if ( is_array( $this->trellis->input['fuploads'] ) )
         {
             $this->trellis->load_functions('attachments');
 
-            if ( $attachments = $this->trellis->func->attachments->get( array( 'select' => array( 'id', 'original_name' ), 'where' => array( 'id', 'in', $this->trellis->input['fuploads'] ) ) ) )
+            //if ( $attachments = $this->trellis->func->attachments->get( array( 'select' => array( 'id', 'original_name' ), 'where' => array( 'id', 'in', $this->trellis->input['fuploads'] ) ) ) )
+            if ($attachments = $this->attachment->get_attachments($this->trellis->input['fuploads'], "id"));
             {
                 $to_attach = array();
 
@@ -3075,10 +3049,10 @@ class td_ad_tickets {
                 {
                     $to_attach[] = $a['id'];
 
-                    $this->trellis->log( array( 'msg' => array( 'ticket_attach', $a['original_name'], $this->trellis->input['subject'] ), 'type' => 'ticket', 'content_type' => 'ticket', 'content_id' => $ticket_id ) );
+                    $this->log->log( array( 'msg' => array( 'ticket_attach', $a['original_name'], $this->trellis->input['subject'] ), 'type' => 'ticket', 'content_type' => 'ticket', 'content_id' => $ticket_id ) );
                 }
 
-                $this->trellis->func->attachments->assign( $to_attach, $ticket_id );
+                $this->attachment->assign( $to_attach, $ticket_id );
             }
         }
 
@@ -3088,7 +3062,7 @@ class td_ad_tickets {
 
         $this->trellis->send_message( 'alert', $this->trellis->lang['alert_ticket_added'] );
 
-        if ( $this->check_perm( $ticket_id, $this->trellis->input['did'], 'v' ) )
+        if ( $ticket->check_ticket_permission($ticket_id, $this->trellis->input['did'], 'v'))
         {
             $this->trellis->skin->redirect( array( 'act' => 'view', 'id' => $ticket_id  ) );
         }

@@ -5,16 +5,19 @@ namespace BambooDesk;
 class Ticket
 {
     protected $db;
+    protected $user;
 
     public int $id;
     public array $auto_assigned;
     public string $mask;
+    public string $priorityName;
+    private array $assigned_override;
 
     public int $did;
     public int $uid;
     public string $email;
     public string $subject;
-    public int $priority;
+
     public string $message;
     public int $html;
     public int $last_uid;
@@ -37,19 +40,49 @@ class Ticket
     public int $date;
     public string $ipadd;
 
-    public function __construct(Database $db)
+    public function __construct(Database $db, $user)
     {
         $this->db = $db;
+        $this->user = $user;
     }
     public function prepare_ticket_notification(array $template_data) :string
     {
         $ticketId = $template_data['ticket_id'];
         $ticketLink = $template_data['ticket_link'];
+        $department = $template_data['department_name'];
+        $priority =  $template_data['priority_level'];
+        $subject = $template_data['subject'];
+        $message = $template_data['ticket_message'];
+        $personName =  $template_data['person_name'];
 
-        $html = "Your ticket was sucessfully submitted your ticket id is: <b>$ticketId</b> you can view the ticket at this link
-                <a href='$ticketLink'>View Ticket</a>";
+        $html = "<p>Dear $personName,</p><p>A new guest ticket has been submitted on your behalf. Our staff will review your ticket shortly and reply accordingly.</p>
+                <p>---------------------------</p>
+                <p>Ticket ID: $ticketId 
+                    <br />Subject: $subject
+                    <br />Department: $department
+                    <br />Priority: $priority</p>
+                <p>---------------------------</p>
+                <p>$message</p>
+                <p>---------------------------</p>
+                <p>You can view your ticket using this link: 
+                <a href='$ticketLink'>View Ticket</a></p><p>Regards,</p>
+                <p>The Bamboo Desk team.<br /><a href='#'>http://bamboo.local</a></p>";
 
         return $html;
+    }
+    public function fetch_ticket_priorty_level(int $ticketId): string
+    {
+        $data = [];
+        $data['ticket_id'] = $ticketId;
+
+        $table = $this->db->_dbPrefix."priorities";
+        $joinTable = $this->db->_dbPrefix."tickets";
+
+        $sql = "SELECT p.name FROM $table p
+                INNER JOIN $joinTable t ON  p.id = t.priority
+                WHERE t.id = :ticket_id";
+
+        return $this->priorityName = $this->db->runSql($sql, $data)->fetchColumn();
     }
     public function create_admin_ticket(array $ticket): bool
     {
@@ -173,13 +206,13 @@ class Ticket
         $data = [];
         $data['id'] = $departmentId;
 
-
-        $sql = "SELECT tickets_total FROM departments WHERE id = :id";
+        $table = $this->db->_dbPrefix."departments";
+        $sql = "SELECT tickets_total FROM $table WHERE id = :id";
         $totalTicketsDept = $this->db->runSql($sql, $data)->fetchColumn();
 
         $data['total'] = $totalTicketsDept + 1;
 
-        $sql = "UPDATE departments SET tickets_total = :total WHERE id = :id";
+        $sql = "UPDATE $table SET tickets_total = :total WHERE id = :id";
         $this->db->runSql($sql, $data);
 
     }
@@ -189,7 +222,8 @@ class Ticket
         $data = [];
         $data['id'] = $userId;
 
-        $sql = "SELECT tickets_total, tickets_open FROM users WHERE id =:id";
+        $table = $this->db->_dbPrefix."users";
+        $sql = "SELECT tickets_total, tickets_open FROM $table WHERE id =:id";
         $statement = $this->db->runSql($sql, $data);
 
         $ticketsCurrentTotal = $statement->fetchColumn();
@@ -198,9 +232,45 @@ class Ticket
         $data['tickets_total'] = $ticketsCurrentTotal;
         $data['tickets_open'] = $ticketsCurrentOpen;
 
-        $sql = "UPDATE users SET tickets_total = :tickets_total, tickets_open = :tickets_open WHERE id = :id";
+        $sql = "UPDATE $table SET tickets_total = :tickets_total, tickets_open = :tickets_open WHERE id = :id";
         $this->db->runSql($sql, $data);
 
+    }
+
+    public function fetch_ticket_by_id_and_userid($tid)
+    {
+        $data = [];
+        $data['table'] = $this->db->_dbPrefix."tickets";
+        $data['tid'] = $tid;
+        $data['uid'] = $this->user['id'];
+
+        $sql = "SELECT id FROM :table WHERE id = :tid AND uid = :uid";
+        return $this->db->runSql($sql, $data)->fetch();
+
+    }
+
+    public function check_ticket_permission($tid, $did, $type)
+    {
+        if ( $this->user['id'] == 1 ) return true;
+
+        if ( ! $this->user['g_acp_depart_perm'][ $did ]['v'] )
+        {
+            if ( ! $this->assigned_override[ $tid ] )
+            {
+                if ( ! $a = $this->fetch_ticket_by_id_and_userid($tid) )
+                {
+                    return false;
+                }
+
+                $this->assigned_override[ $tid ] = $a['id'];
+            }
+        }
+
+        if ( $type == 'v' ) return true;
+
+        if ( ! $this->user['g_acp_depart_perm'][ $did ][ $type ] ) return false;
+
+        return true;
     }
 
 }
