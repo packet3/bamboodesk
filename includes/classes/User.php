@@ -32,4 +32,26 @@ class User
 
     }
 
+    public function fetch_user_by_id(int $userId) :array
+    {
+        $data = [];
+        $data['user_id'] = $userId;
+        $table = $this->db->_dbPrefix."users";
+
+        $sql = "SELECT * FROM $table WHERE id = :user_id ";
+        return $this->db->runSql($sql, $data)->fetch();
+
+    }
+
+    public function fetch_user_by_email(string $userEmail)
+    {
+        $data = [];
+        $data['user_email'] = $userEmail;
+        $table = $this->db->_dbPrefix."users";
+
+        $sql = "SELECT * FROM $table WHERE id = :user_email ";
+        return $this->db->runSql($sql, $data)->fetch();
+
+    }
+
 }

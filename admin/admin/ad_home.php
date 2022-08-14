@@ -56,12 +56,12 @@ class td_ad_home {
         # Table Columns
         #=============================
 
-        $columns = unserialize( $this->trellis->user['columns_tm'] );
-
-        if ( empty( $columns ) )
-        {
-            $columns = array( 'id' => '3%', 'mask' => '6%', 'subject' => '30%', 'priority' => '13%', 'department' => '18%', 'reply' => '17%', 'status' => '13%' );
-        }
+        //$columns = unserialize( $this->trellis->user['columns_tm'] );
+//
+//        if ( empty( $columns ) )
+//        {
+            $columns = array( 't.id' => '3%', 'mask' => '6%', 'subject' => '30%', 'priority' => '13%', 'department' => '18%', 'reply' => '17%', 'status' => '13%' );
+//        }
 
         $dark_columns = array( 'subject', 'date', 'last_reply' );
         $normal_columns = array( 'dname', 'date', 'last_reply' );
@@ -401,7 +401,7 @@ class td_ad_home {
 
         if ( ! in_array( 'id', $sql_columns ) )
         {
-            $sql_columns[] = 'id';
+            $sql_columns[] = 't.id';
         }
 
         // Tracking
@@ -419,7 +419,7 @@ class td_ad_home {
         $ticket_rows = '';
 
         //CREATE SQL QUERY
-        $sql = $this->trellis->database->createSQLString($sql_columns, $sql_where, $this->trellis->input['st']. " 8",
+        $sql = $this->trellis->database->createSQLString($sql_columns, "tickets t", $sql_where, $this->trellis->input['st']. " 8",
                                                          $sql_sort_table,  $sql_sort_field, $sql_order, $sql_join);
 
         //$this->database->runSql($sql, [$this->input['q']])->fetchAll();
@@ -525,9 +525,9 @@ class td_ad_home {
 
                     $ticket_rows .= ">";
 
-                    if ( $name == 'id' || $name == 'mask' ) $ticket_rows .= "<a href='<! TD_URL !>/admin.php?section=manage&amp;page=tickets&amp;act=view&amp;id={$t['id']}'>";
+                    if ( $name == 't.id' || $name == 'mask' ) $ticket_rows .= "<a href='<! TD_URL !>/admin.php?section=manage&amp;page=tickets&amp;act=view&amp;id={$t['id']}'>";
 
-                    if ( $name == 'id' ) $ticket_rows .= "<strong>";
+                    if ( $name == 't.id' ) $ticket_rows .= "<strong>";
 
                     if ( $name == 'subject' )
                     {

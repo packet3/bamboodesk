@@ -29,7 +29,7 @@ class td_ad_tickets {
     {
 
         //Instantiate Needed Classes
-       $this->attachment = new \BambooDesk\Attachment($this->trellis->database);
+       $this->attachment = new \BambooDesk\Attachment($this->trellis->database, $this->trellis);
         $this->log = new \BambooDesk\Log($this->trellis->database, $this->trellis->settings, $this->trellis->lang, $this->trellis->user);
         $this->ticket = new \BambooDesk\Ticket($this->trellis->database, $this->trellis->user);
 
@@ -2028,7 +2028,10 @@ class td_ad_tickets {
 
     private function add_ticket()
     {
-        if ( ! $this->trellis->user['g_ticket_create'] && $this->trellis->user['id'] != 1 ) $this->trellis->skin->error('no_perm');
+        if ( ! $this->trellis->user['g_ticket_create'] && $this->trellis->user['id'] != 1 )
+        {
+            $this->trellis->skin->error('no_perm');
+        }
 
         switch( $this->trellis->input['step'] )
         {
@@ -2059,7 +2062,10 @@ class td_ad_tickets {
         {
             $this->trellis->load_functions('users');
 
-            if ( ! $u = $this->trellis->func->users->get_single( array( 'name' ), array( 'id', '=', $this->trellis->input['uid'] ) ) ) $this->trellis->skin->error('no_user');
+            if ( ! $u = $this->trellis->users->fetch_user_by_id($this->trellis->input['uid']))
+            {
+                $this->trellis->skin->error('no_user');
+            }
         }
 
         $perms = &$this->trellis->user['g_depart_perm'];
@@ -2154,7 +2160,8 @@ class td_ad_tickets {
         $validate = true;
         if ( $this->trellis->input['uid'] )
         {
-            if ( ! $u = $this->trellis->func->users->get_single_by_id( array( 'id', 'name' ), $this->trellis->input['uid'] ) )
+            //if ( ! $u = $this->trellis->func->users->get_single_by_id( array( 'id', 'name' ), $this->trellis->input['uid'] ) )
+            if(! $u = $this->trellis->users->fetch_user_by_id($this->trellis->input['uid']))
             {
                 $this->trellis->send_message( 'error', $this->trellis->lang['error_no_user'] );
                 $validate = false;
@@ -2164,7 +2171,8 @@ class td_ad_tickets {
         {
             if ( $this->trellis->validate_email( $this->trellis->input['uname'] ) )
             {
-                if ( ! $u = $this->trellis->func->users->get_single_by_email( array( 'id', 'name' ), $this->trellis->input['uname'] ) )
+                //if ( ! $u = $this->trellis->func->users->get_single_by_email( array( 'id', 'name' ), $this->trellis->input['uname'] ) )
+                if(! $u = $this->trellis->users->fetch_user_by_email( $this->trellis->input['uname']))
                 {
                     $u = array( 'id' => 0 );
                 }
@@ -2193,6 +2201,12 @@ class td_ad_tickets {
             $this->trellis->skin->error('no_perm');
         }
 
+        //we need to generate a Ticket ID at this stage, this is so we can associate the attachments
+        // when a ticket is created
+        $bytes = random_bytes(4);
+        $ticketId = bin2hex($bytes);
+
+
         #=============================
         # Do Output
         #=============================
@@ -2203,6 +2217,7 @@ class td_ad_tickets {
         $this->output .= "<div id='ticketroll'>
                         ". $this->trellis->skin->start_form( "<! TD_URL !>/admin.php?section=manage&amp;page=tickets&amp;act=doadd", 'add_ticket', 'post' ) ."
                         <input name='uid' id='uid' type='hidden' value='{$this->trellis->input['uid']}' />
+                        <input name='tid' id='tid' type='hidden' value='T{$ticketId}' />
                         ". ( ( ! $u['id'] ) ? "<input name='email' id='email' type='hidden' value='{$this->trellis->input['uname']}' />" : "" ) ."
                         <input name='did' id='did' type='hidden' value='{$this->trellis->input['did']}' />
                         ". $this->trellis->skin->start_group_table( '{lang.submit_a_ticket}', 'a' ) ."
@@ -2212,7 +2227,7 @@ class td_ad_tickets {
                         ". $this->trellis->skin->group_table_row( '{lang.subject}', $this->trellis->skin->textfield( 'subject' ), 'a' ) ."
                         ". $this->trellis->skin->group_table_row( '{lang.priority}', "<select name='priority'>". $this->trellis->func->drop_downs->priority_drop( array( 'select' => $this->trellis->input['priority'] ) ) ."</select>", 'a' );
 
-        if ( $cfields = $this->trellis->func->cdfields->grab( $this->trellis->input['did'] ) )
+        if ( $cfields = $this->trellis->departments->get_custom_department_fields_by_id( $this->trellis->input['did'] ) )
         {
             foreach( $cfields as $fid => $f )
             {
@@ -2253,10 +2268,10 @@ class td_ad_tickets {
                         ". $this->trellis->skin->group_row( $this->trellis->skin->textarea( array( 'name' => 'message', 'cols' => '80', 'rows' => '10', 'width' => '98%', 'height' => '180px' ) ), 'a' ) ."
                         ";
 
-        if ( $this->trellis->cache->data['settings']['ticket']['attachments'] && $this->trellis->user['g_ticket_attach'] && $this->trellis->cache->data['departs'][ $this->trellis->input['did'] ]['allow_attach'] )
+        if ( $this->trellis->settings['ticket']['attachments'] && $this->trellis->user['g_ticket_attach'] && $this->trellis->cache->data['departs'][ $this->trellis->input['did'] ]['allow_attach'] )
         {
-            $this->output .= $this->trellis->skin->group_row( $this->trellis->skin->uploadify_js( 'upload_file', array( 'section' => 'manage', 'page' => 'tickets', 'act' => 'doupload', 'type' => 'ticket', 'id' => $this->trellis->input['did'] ), array( 'multi' => true, 'list' => true ) ), 'a' ) ."
-                        ";
+            //$this->output .= $this->trellis->skin->group_row( $this->trellis->skin->uploadify_js( 'upload_file', array( 'section' => 'manage', 'page' => 'tickets', 'act' => 'doupload', 'type' => 'ticket', 'id' => $this->trellis->input['did'] ), array( 'multi' => true, 'list' => true ) ), 'a' ) ."
+            $this->output .= $this->trellis->skin->group_row( $this->trellis->skin->uploadify_js(array( 'id' => $ticketId)));
         }
 
         $this->output .= $this->trellis->skin->end_form( $this->trellis->skin->submit_button( 'add', '{lang.button_add_ticket}' ) ) ."
@@ -3740,7 +3755,10 @@ class td_ad_tickets {
         # Security Checks
         #=============================
 
-        if ( ! $this->trellis->cache->data['settings']['ticket']['attachments'] || ! $this->trellis->user['g_ticket_attach'] ) $this->trellis->skin->ajax_output( json_encode( array( 'error' => true, 'errormsg' => $this->trellis->lang['error_upload_perm'] ) ) );
+        if ( ! $this->trellis->settings['ticket']['attachments'] || ! $this->trellis->user['g_ticket_attach'] )
+        {
+            $this->trellis->skin->ajax_output( json_encode( array( 'error' => true, 'errormsg' => $this->trellis->lang['error_upload_perm'] ) ) );
+        }
 
         if ( ! $this->trellis->input['type'] ) $this->trellis->skin->ajax_output( json_encode( array( 'error' => true, 'errormsg' => $this->trellis->lang['error_upload_perm'] ) ) );
 
@@ -3762,11 +3780,11 @@ class td_ad_tickets {
         #=============================
         # Upload File
         #=============================
-
+        $fileAttachmentObj = new \BambooDesk\Attachment($this->trellis->database, $this->trellis);
         $this->trellis->load_functions('attachments');
-
-        $file = $this->trellis->func->attachments->upload( $_FILES['Filedata'], array( 'content_type' => $this->trellis->input['type'] ), 'ajax' );
-
+        $ticketId = $this->trellis->input['tid'];
+        //$file = $this->trellis->func->attachments->upload( $_FILES['Filedata'], array( 'content_type' => $this->trellis->input['type'] ), 'ajax' );
+        $fileAttachmentObj->upload($ticketId, $_FILES['files'], 'ajax');
         #=============================
         # Do Output
         #=============================

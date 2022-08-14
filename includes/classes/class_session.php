@@ -265,6 +265,7 @@ class td_class_session {
         # Select User
         #=============================
 
+
         $this->trellis->db->construct( array(
                                                    'select'    => array(
                                                                      'm' => array( 'id', 'name', 'email', 'pass_hash', 'pass_salt', 'ugroup', 'ugroup_sub', 'title', 'joined', 'signature', 'sig_html', 'sig_auto', 'lang', 'skin', 'time_zone', 'time_dst', 'rte_enable', 'email_enable', 'email_ticket', 'email_action', 'email_news', 'email_type', 'tickets_total', 'tickets_open', 'val_email', 'val_admin' ),

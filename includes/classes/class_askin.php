@@ -1720,202 +1720,62 @@ class td_class_askin {
     # @ Uploadify Javascript
     #=======================================
 
-    public function uploadify_js($input, $data=array(), $params=array())
+    public function uploadify_js($data=array())
     {
-        $html = "<script language='javascript' type='text/javascript'>
-                // <![CDATA[
-                $(function() {
-                $('#". $input ."').uploadify({
-                'uploader'  : 'includes/uploadify/uploadify.swf',
-                'script'    : 'admin.php',
-                'cancelImg' : '<! IMG_DIR !>/icons/cross.png',
-                'scriptData': {
-                    'session_id': '". $this->trellis->user['s_id'] ."'";
 
-        if ( ! empty( $data ) && is_array( $data ) )
-        {
-            $query_data = '';
+        $html = '<div class="Uppy"><input type="file" name="files[]" multiple="false"></div>';
+        $html .= '<div class="UppyProgressBar"></div>';
+        $html .= '<div class="uploaded-files">
+                  <h5>Uploaded files:</h5>
+                  <ol></ol>
+                </div>';
 
-            foreach( $data as $field => $value )
-            {
-                $query_data .= ",\n\t\t\t\t\t'". $field ."': '". $value ."'";
-            }
+        $html .= "<script src='skins/s1/scripts/uppy.min.js'></script>
+                 <script>
+                 document.querySelector('.Uppy').innerHTML = ''
+                 const uppy = new Uppy.Core({ debug: true, autoProceed: true })
+                    uppy.use(Uppy.FileInput, {
+                      target: '.Uppy',
+                    })
+                    uppy.use(Uppy.ProgressBar, {
+                      target: '.UppyProgressBar',
+                      hideAfterFinish: false,
+                    })
+                    uppy.use(Uppy.XHRUpload, {
+                      endpoint: '<! TD_URL !>/admin.php?section={$this->trellis->input['section']}&page={$this->trellis->input['page']}&act=doupload&tid={$data['id']}',
+                      formData: true,
+                      fieldName: 'files[]',
+                    })
+                    uppy.use(Uppy.ThumbnailGenerator, {
+                      id: 'ThumbnailGenerator',
+                      thumbnailWidth: 200,
+                      thumbnailHeight: 200,
+                      thumbnailType: 'image/jpeg',
+                      waitForThumbnailsBeforeUpload: false,
+                    })
 
-            $html .= $query_data;
-        }
-
-        if ( $params['type'] == 'images' )
-        {
-            $fileDesc = 'Image Files (gif, jpg, jpeg, png, svg, tiff)';
-            $fileExt = '*.gif;*.jpg;*.jpeg;*.png;*.svg;*.tiff';
-        }
-        else
-        {
-            $fileDesc = 'Files ('. implode( ', ', ( $extensions = array_map( 'trim', explode( ',', $this->trellis->cache->data['settings']['general']['upload_exts'] ) ) ) ) .')';
-            $fileExt = implode( ';', array_map( create_function( '$a', 'return \'*.\'. $a;' ), $extensions ) );
-        }
-
-        $multi = ( $params['multi'] ) ? 'true' : 'false';
-
-        $html .= "
-                },
-                'auto': true,
-                'fileDesc': '{$fileDesc}',
-                'fileExt': '{$fileExt}',
-                'simUploadLimit': 1,
-                ";
-
-        if ( $params['list'] && $this->trellis->user['g_upload_size_max'] )
-        {
-            $html .= "'sizeLimit': {$this->trellis->user['g_upload_size_max']},";
-        }
-
-        $html .= "
-                'multi': {$multi},
-                'hideButton': true,
-                'width': '70px',
-                'height': '28px',
-                'wmode': 'transparent',
-                'onCancel': function(event,queueID,fileObj,data) {
-                    uploadUpdate('remove');
-                },
-                'onComplete': function(event,queueID,fileObj,response,data) {
-                    uploadComplete(event,queueID,fileObj,response,data);
-                },
-                'onError': function(event,queueID,fileObj,errorObj) {
-                    uploadError(event,queueID,fileObj,errorObj);
-                },
-                'onSelect': function(event,queueID,fileObj) {
-                    uploadUpdate('add');
-                }
-                });
-
-                var simpleUpload = new AjaxUpload('#simple_upload_file', {
-                    action: 'admin.php',
-                    name: 'Filedata',
-                    data: {";
-
-        if ( $query_data )
-        {
-            $html .= substr( $query_data, 1 );
-        }
-
-        $html .= "
-                    },
-                    autoSubmit: false,
-                    onChange: function(file, ext) {
-                        $('#simple_upload_file .ui-button-text').text(file);
-                    },
-                    onSubmit: function(file, ext) {
-                        $('#simple_upload').val('{lang.button_uploading}');
-                        $('#simple_upload').attr('disabled', true);
-                    },
-                    onComplete: function(file, response) {
-                        uploadComplete(null, null, null, response, null);
-                        $('#simple_upload_file .ui-button-text').text('{lang.browse}');
-                        $('#simple_upload').val('{lang.button_upload}');
-                        $('#simple_upload').removeAttr('disabled');
-                    }
-                });
-
-                $('#simple_upload').click(function() {
-                    simpleUpload.submit();
-                });
-
-                $('#upload_switch_simple').click(function() {
-                    $('#upload_flash').hide();
-                    $('#upload_simple').show();
-                });
-
-                $('#upload_switch_flash').click(function() {
-                    $('#upload_simple').hide();
-                    $('#upload_flash').show();
-                });
-                });
-                ";
-
-        if ( $params['list'] )
-        {
-            $html .= "
-                function uploadComplete(event, queueID, fileObj, response, data) {
-                    jsonResponse = convertFromJson(response);
-                    if (jsonResponse.success) {
-                        $('#upload_msg').text(jsonResponse.successmsg);
-                        $('#upload_list').append(\"<li id='uf_\"+jsonResponse.id+\"'><input type='hidden' name='fuploads[]' value='\"+jsonResponse.id+\"' />\"+jsonResponse.name+\"<span class='uploaddel' onclick='uploadDelete(\"+jsonResponse.id+\")'></span></li>\");
-                        $('#upload_list').show();
-                    }
-                    else {
-                        if (jsonResponse.error) {
-                            $('#upload_msg').text(jsonResponse.errormsg);
-                        }
-                        else {
-                            $('#upload_msg').text('unknown error');
-                        }
-                    }
-                    $('#upload_msg').stop().show('blind');
-                    $('#upload_msg').animate({opacity: 1.0}, 5000);
-                    $('#upload_msg').hide('blind');
-                    uploadUpdate();
-                    return false;
-                }
-
-                function uploadError(event, queueID, fileObj, errorObj) {
-                    uploadUpdate();
-                }
-
-                function uploadUpdate(adjust) {
-                    if ( $('.uploadifyQueueItem').size() > 1 ) {
-                        var newheight = $('#upload_fileQueue').outerHeight();
-                        if (adjust == 'add') {
-                            newheight += $('.uploadifyQueueItem').outerHeight();
-                        } else if (adjust == 'remove') {
-                            newheight -= $('.uploadifyQueueItem').outerHeight();
-                        }
-                        $('#upload_fileQueue').parent().parent().height( newheight );
-                    }
-                    return true;
-                }
-
-                function uploadDelete(fid) {
-                    $.getJSON('<! TD_URL !>/admin.php?section={$this->trellis->input['section']}&page={$this->trellis->input['page']}&act=dodelupload&id='+fid, function(jsonResponse) {
-                        if (jsonResponse.success) {
-                            $('#uf_'+fid).remove();
-                        }
-                        else {
-                            if (jsonResponse.error) {
-                                $('#upload_msg').text('{$this->trellis->lang['error_upload_delete']}');
-                            }
-                            else {
-                                $('#upload_msg').text('unknown error');
-                            }
-                            $('#upload_msg').stop().show('blind');
-                            $('#upload_msg').animate({opacity: 1.0}, 5000);
-                            $('#upload_msg').hide('blind');
-                        }
-                    });
-                }";
-        }
-
-        $html .= "
-                // ]]>
-                </script>
-                <div id='upload_flash' style='position: relative;'>
-                    <span class='button'>{lang.browse}</span>
-                    <div style='position:absolute; top: 0;'>
-                        <input id='upload_file' name='upload_file' type='file' />
-                    </div>
-                    <div style='float: right;'><span id='upload_switch_simple' class='button'>{lang.upload_switch_simple}</span></div>
-                </div>
-                <div id='upload_simple' style='display: none;'>
-                    <span id='simple_upload_file' class='button'>{lang.browse}</span> <input type='button' id='simple_upload' name='simple_upload' value='{lang.button_upload}' class='button' />
-                    <div style='float: right;'><span id='upload_switch_flash' class='button'>{lang.upload_switch_flash}</span></div>
-                </div>
-                <div id='upload_msg' style='display:none;margin-top:12px'>&nbsp;</div>";
-
-        if ( $params['list'] )
-        {
-            $html .= "<ul id='upload_list'></ul>";
-        }
+                // And display uploaded files
+                uppy.on('upload-success', (file, response) => {
+                  const url = response.uploadURL
+                  const fileName = file.name
+                
+                  const li = document.createElement('li')
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.target = '_blank'
+                  a.appendChild(document.createTextNode(fileName))
+                  li.appendChild(a)
+                
+                  document.querySelector('.uploaded-files ol').appendChild(li)
+                })
+                
+                uppy.on('thumbnail:generated', (file, preview) => {
+                  const img = document.createElement('img')
+                  img.src = preview
+                  img.width = 100
+                  document.querySelector('.uploaded-files').appendChild(img)
+                })
+            </script>";
 
         return $html;
     }
@@ -1932,13 +1792,16 @@ class td_class_askin {
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>{lang.acp_title}</title>
+     <link href="https://releases.transloadit.com/uppy/v3.0.0-beta.4/uppy.min.css" rel="stylesheet">
     <link href="skins/s1/css/jquery-ui.css" rel="stylesheet" type="text/css" media="screen" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" 
+    rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <link href="skins/s1/css/tiburon.css" rel="stylesheet" type="text/css" media="screen" />
     <script src="skins/s1/scripts/navlinks.js" type="text/javascript"></script>
     <script src="skins/s1/scripts/catlinks.js" type="text/javascript"></script>
     <script src="skins/s1/scripts/livevalidation.js" type="text/javascript"></script>
     <script src="skins/s1/scripts/jquery.js" type="text/javascript"></script>
-    <script src="skins/s1/scripts/jquery-ui.js" type="text/javascript"></script>
+<!--    <script src="skins/s1/scripts/jquery-ui.js" type="text/javascript"></script>-->
     <script src="skins/s1/scripts/jqueryextras.js" type="text/javascript"></script>
     <script src="includes/tinymce/tiny_mce.js" type="text/javascript"></script>
     <script src="skins/s1/scripts/common_acp.js" type="text/javascript"></script>

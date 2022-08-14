@@ -113,7 +113,7 @@ class td_class_error_handler {
     # @ Log Error
     #=======================================
 
-    private function log_error($errmsg)
+    private static function log_error($errmsg)
     {
         if ( td_class_error_handler::$log_path ) @error_log( $errmsg, 3, td_class_error_handler::$log_path );
     }

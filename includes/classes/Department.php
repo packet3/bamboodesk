@@ -27,15 +27,15 @@ class Department
         return $this->name = $this->db->runSql($sql, $data)->fetchColumn();
     }
 
-    public function get_custom_department_fields_by_ticket_id(int $ticketId) : array
+    public function get_custom_department_fields_by_id(int $departmentID) : array
     {
         $return = [];
 
         $data = [];
-        $data['ticket_id'] = $ticketId;
+        $data['dept_id'] = $departmentID;
 
-        $table = $this->db->_dbPrefix."depart_fields_data";
-        $sql = "SELECT fid, data, extra FROM $table WHERE tid = :ticket_id";
+        $table = $this->db->_dbPrefix."depart_fields";
+        $sql = "SELECT id, name, type, extra, departs, required, position FROM $table WHERE id = :dept_id";
         $data = $this->db->runSql($sql, $data)->fetchAll();
 
         if ( ! count($data) )
@@ -43,19 +43,19 @@ class Department
             return [];
         }
 
-        foreach($data as $row)
-        {
-            if ( $row['extra'] )
-            {
-                $return[ $row['fid'] ][ $row['extra'] ] = $row['data'];
-            }
-            else
-            {
-                $return[ $row['fid'] ] = $row['data'];
-            }
-        }
+//        foreach($data as $row)
+//        {
+//            if ( $row['extra'] )
+//            {
+//                $return[ $row['fid'] ][ $row['extra'] ] = $row['data'];
+//            }
+//            else
+//            {
+//                $return[ $row['fid'] ] = $row['data'];
+//            }
+//        }
 
-        return $return;
+        return $data;
     }
 
 }

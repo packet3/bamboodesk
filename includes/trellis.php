@@ -91,6 +91,22 @@ class trellis {
         #=============================
         $settingsObj =  new \BambooDesk\Settings($this->database);
         $this->settings = $settingsObj->fetch_settings();
+
+        #=============================
+        # Load User Object - NEW WAY
+        #=============================
+        $usersObj = new \BambooDesk\User($this->database);
+        $this->users = $usersObj;
+
+
+
+
+        #=============================
+        # Load Department Object
+        #=============================
+        $deptObj = new \BambooDesk\Department($this->database);
+        $this->departments = $deptObj;
+
         #=============================
         # Load Templates
         #=============================
@@ -143,6 +159,8 @@ class trellis {
         # Load Session
         #=============================
 
+
+
         require_once TD_CLASS .'session.php';
 
         $this->session = new td_class_session();
@@ -151,9 +169,17 @@ class trellis {
         //new code
         $this->session->bamboo = &$this;
 
+        #=============================
+        # Load Session - NEW WAY
+        #=============================
+        $sessionObj = new \BambooDesk\Session($this->database, $this->session->bamboo);
+
+
+
         if ( $this->input['do_login'] )
         {
-            $this->user = $this->session->do_login();
+            //$this->user = $this->session->do_login();
+            $this->user = $sessionObj->do_login();
         }
         elseif ( $this->input['do_glogin'] )
         {

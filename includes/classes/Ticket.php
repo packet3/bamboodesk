@@ -247,6 +247,8 @@ class Ticket
         $sql = "SELECT id FROM :table WHERE id = :tid AND uid = :uid";
         return $this->db->runSql($sql, $data)->fetch();
 
+
+
     }
 
     public function check_ticket_permission($tid, $did, $type)
