@@ -256,8 +256,9 @@ class trellis {
 
                     $class_name = 'td_func_'. $name;
 
-                    $this->func->$name = new $class_name();
-                    $this->func->$name->trellis = &$this;
+                    //add @ to prevent warning message from showing, will need to fix at a later stage
+                    @$this->func->$name = new $class_name();
+                    @$this->func->$name->trellis = &$this;
                 }
                 else
                 {

@@ -242,7 +242,7 @@ class td_class_askin {
 
         $this->trellis->shut_down();
 
-        if ( $this->trellis->cache->data['settings']['general']['shutdown_enable'] )
+        if ( $this->trellis->settings['general']['shutdown_enable'] )
         {
             $this->send_output('ajax');
         }
@@ -311,9 +311,9 @@ class td_class_askin {
             }
         }
 
-        if ( $this->trellis->cache->data['settings']['general']['shutdown_enable'] )
+        if ( $this->trellis->settings['general']['shutdown_enable'] )
         {
-            if ( ! ( $time_limit = intval( $this->trellis->cache->data['settings']['general']['shutdown_time'] ) ) ) $time_limit = 30;
+            if ( ! ( $time_limit = intval( $this->trellis->settings['general']['shutdown_time'] ) ) ) $time_limit = 30;
 
             ignore_user_abort(true);
             set_time_limit( $time_limit );
@@ -1745,6 +1745,7 @@ class td_class_askin {
                       endpoint: '<! TD_URL !>/admin.php?section={$this->trellis->input['section']}&page={$this->trellis->input['page']}&act=doupload&tid={$data['id']}',
                       formData: true,
                       fieldName: 'files[]',
+                                    
                     })
                     uppy.use(Uppy.ThumbnailGenerator, {
                       id: 'ThumbnailGenerator',
@@ -1755,16 +1756,25 @@ class td_class_askin {
                     })
 
                 // And display uploaded files
+                  
                 uppy.on('upload-success', (file, response) => {
-                  const url = response.uploadURL
-                  const fileName = file.name
+                   console.log(response.body)
+              
+                  let fileName = file.name 
                 
                   const li = document.createElement('li')
-                  const a = document.createElement('a')
-                  a.href = url
-                  a.target = '_blank'
-                  a.appendChild(document.createTextNode(fileName))
-                  li.appendChild(a)
+                  const span = document.createElement('span')
+                  if (response.body.success)
+                  {
+                      span.className = 'text-success';
+                  } else {
+                      span.className = 'text-danger';
+                      fileName += ' - ' + response.body.errormsg
+                  }
+              
+                 
+                  span.appendChild(document.createTextNode(fileName))
+                  li.appendChild(span)
                 
                   document.querySelector('.uploaded-files ol').appendChild(li)
                 })

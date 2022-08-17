@@ -100,7 +100,7 @@ class Attachment
         }
 
         $file_name = md5( $files['name'][0] . microtime() );
-        $upload_location = $this->bamboo->settings['general']['upload_dir'] . $file_name . $file_ext;
+        $upload_location = $this->bamboo->settings['general']['upload_dir'] . $file_name . '.'.$file_ext;
 
         if ( ! is_writeable( $this->bamboo->settings['general']['upload_dir'] ) )
         {
@@ -115,6 +115,8 @@ class Attachment
         # TODO: only run chmod if web user is 'nobody' (just have a setting)
         //@chmod( $upload_location, 0666 );
 
+        $data['content_type'] = 'N/A';
+        $data['content_id'] = -1;
         $data['uid'] = $this->bamboo->user['id'];
         $data['real_name'] = $file_name;
         $data['original_name'] = $this->bamboo->sanitize_data( $files['name'][0] );
@@ -132,29 +134,22 @@ class Attachment
         $data['size'] = $files['size'][0];
         $data['date'] = time();
         $data['ipadd'] = $this->bamboo->input['ip_address'];
+        $data['ticket_id'] = $ticketID;
 
-        $fields = array(
-            'content_type'    => 'string',
-            'content_id'    => 'int',
-            'uid'            => 'int',
-            'real_name'        => 'string',
-            'original_name'    => 'string',
-            'extension'        => 'string',
-            'mime'            => 'string',
-            'size'            => 'int',
-            'date'            => 'int',
-            'ipadd'            => 'string',
-        );
+        //Database Insert
+        $table = $this->db->_dbPrefix."attachments";
+        $sql = "INSERT INTO $table (content_type, content_id, uid, real_name, original_name, extension, mime, size, date, ipadd, ticket_id)
+                VALUES(:content_type, :content_id, :uid, :real_name, :original_name, :extension, :mime, :size, :date, :ipadd, :ticket_id)";
 
-        $this->trellis->db->construct( array(
-            'insert'    => 'attachments',
-            'set'    => $this->trellis->process_data( $fields, $data ),
-        )       );
+        $this->db->runSql($sql, $data);
+        $insertedId = $this->db->lastInsertedId;
 
-        $this->trellis->db->execute();
 
-        if ( $response == 'ajax' ) return array( 'id' => $this->trellis->db->get_insert_id(), 'name' => $data['original_name'] );
+        if ( $response == 'ajax' )
+        {
+            return array( 'id' => $insertedId, 'name' => $data['original_name'] );
+        }
 
-        return $this->trellis->db->get_insert_id();
+        return $insertedId;
     }
 }

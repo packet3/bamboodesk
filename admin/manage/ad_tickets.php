@@ -3784,14 +3784,15 @@ class td_ad_tickets {
         $this->trellis->load_functions('attachments');
         $ticketId = $this->trellis->input['tid'];
         //$file = $this->trellis->func->attachments->upload( $_FILES['Filedata'], array( 'content_type' => $this->trellis->input['type'] ), 'ajax' );
-        $fileAttachmentObj->upload($ticketId, $_FILES['files'], 'ajax');
+        $file = $fileAttachmentObj->upload($ticketId, $_FILES['files'], 'ajax');
         #=============================
         # Do Output
         #=============================
 
-        $this->trellis->skin->ajax_output( json_encode( array( 'success' => true, 'successmsg' => $this->trellis->lang['upload_success'], 'id' => $file['id'], 'name' => $file['name'] ) ) );
+        //$this->trellis->skin->ajax_output( json_encode( array( 'success' => true, 'successmsg' => $this->trellis->lang['upload_success'], 'id' => $file['id'], 'name' => $file['name'] ) ) );
 
-        exit();
+        echo json_encode( array( 'success' => true, 'successmsg' => $this->trellis->lang['upload_success'], 'id' => $file['id'], 'name' => $file['name'] ) );
+
     }
 
     #=======================================
