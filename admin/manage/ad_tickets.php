@@ -1,5 +1,12 @@
 <?php
 
+use BambooDesk\Attachment;
+use BambooDesk\Department;
+use BambooDesk\Email;
+use BambooDesk\Log;
+use BambooDesk\Ticket;
+use BambooDesk\User;
+
 /**
  * Trellis Desk
  *
@@ -14,9 +21,13 @@ class td_ad_tickets {
     private $output = "";
     private $assigned_override = array();
     private $parsed_sigs;
-    private $attachement;
-    private $log;
-    private $ticket;
+    private Attachment $attachment;
+    private Log $log;
+    private Ticket $ticket ;
+    private Department $department;
+    private Email $email;
+    private User $bamboo_user;
+
 
 
 
@@ -29,9 +40,12 @@ class td_ad_tickets {
     {
 
         //Instantiate Needed Classes
-       $this->attachment = new \BambooDesk\Attachment($this->trellis->database, $this->trellis);
-        $this->log = new \BambooDesk\Log($this->trellis->database, $this->trellis->settings, $this->trellis->lang, $this->trellis->user);
-        $this->ticket = new \BambooDesk\Ticket($this->trellis->database, $this->trellis->user);
+        $this->attachement = new Attachment($this->trellis->database, $this->trellis);
+        $this->log = new Log($this->trellis->database, $this->trellis->settings, $this->trellis->lang, $this->trellis->user);
+        $this->ticket = new Ticket($this->trellis->database, $this->trellis->user);
+        $this->department = new Department($this->trellis->database);
+        $this->email = new Email($this->trellis->config,$this->trellis->database, $this->trellis);
+        $this->bamboo_user = new User($this->trellis->database);
 
         $this->trellis->load_functions('tickets');
         $this->trellis->load_lang('tickets');
@@ -1744,7 +1758,7 @@ class td_ad_tickets {
                                 </div>
                                 ";
 
-            if ( $this->trellis->cache->data['settings']['ticket']['attachments'] && $this->trellis->user['g_ticket_attach'] && $this->trellis->cache->data['departs'][ $t['did'] ]['allow_attach'] ) {
+            if ( $this->trellis->settings['ticket']['attachments'] && $this->trellis->user['g_ticket_attach'] && $this->trellis->cache->data['departs'][ $t['did'] ]['allow_attach'] ) {
                 $this->output .= "<div class='option1'>
                                     ". $this->trellis->skin->uploadify_js( 'upload_file', array( 'section' => 'manage', 'page' => 'tickets', 'act' => 'doupload', 'type' => 'reply', 'id' => $t['id'] ), array( 'multi' => true, 'list' => true ) ) ."
                                 </div>";
@@ -2204,7 +2218,7 @@ class td_ad_tickets {
         //we need to generate a Ticket ID at this stage, this is so we can associate the attachments
         // when a ticket is created
         $bytes = random_bytes(4);
-        $ticketId = bin2hex($bytes);
+        $ticketId = 'T'.bin2hex($bytes);
 
 
         #=============================
@@ -2217,7 +2231,7 @@ class td_ad_tickets {
         $this->output .= "<div id='ticketroll'>
                         ". $this->trellis->skin->start_form( "<! TD_URL !>/admin.php?section=manage&amp;page=tickets&amp;act=doadd", 'add_ticket', 'post' ) ."
                         <input name='uid' id='uid' type='hidden' value='{$this->trellis->input['uid']}' />
-                        <input name='tid' id='tid' type='hidden' value='T{$ticketId}' />
+                        <input name='tid_mask' id='tid_mask' type='hidden' value='T{$ticketId}' />
                         ". ( ( ! $u['id'] ) ? "<input name='email' id='email' type='hidden' value='{$this->trellis->input['uname']}' />" : "" ) ."
                         <input name='did' id='did' type='hidden' value='{$this->trellis->input['did']}' />
                         ". $this->trellis->skin->start_group_table( '{lang.submit_a_ticket}', 'a' ) ."
@@ -3041,35 +3055,58 @@ class td_ad_tickets {
         $ticket['lang'] = $this->trellis->input['lang'];
         $ticket['notify'] = $this->trellis->input['notify'];
 
-        //Maybe Move this
-        $ticket_id = $this->trellis->func->tickets->add( $ticket );
 
+        $this->ticket->ticketData = $ticket;
+        $result  = $this->ticket->create_admin_ticket();
 
-        #=============================
-        # Assign Attachments
-        #=============================
-
-
-
-        if ( is_array( $this->trellis->input['fuploads'] ) )
+        if($result)
         {
-            $this->trellis->load_functions('attachments');
-
-            //if ( $attachments = $this->trellis->func->attachments->get( array( 'select' => array( 'id', 'original_name' ), 'where' => array( 'id', 'in', $this->trellis->input['fuploads'] ) ) ) )
-            if ($attachments = $this->attachment->get_attachments($this->trellis->input['fuploads'], "id"));
+            #=============================
+            # Assign Attachments
+            #=============================
+            if ( is_array( $this->trellis->input['fuploads'] ) )
             {
-                $to_attach = array();
+                //$this->trellis->load_functions('attachments');
 
-                foreach ( $attachments as &$a )
+                //if ( $attachments = $this->trellis->func->attachments->get( array( 'select' => array( 'id', 'original_name' ), 'where' => array( 'id', 'in', $this->trellis->input['fuploads'] ) ) ) )
+                if ($attachments = $this->attachment->get_attachments($this->trellis->input['fuploads'], "id"));
                 {
-                    $to_attach[] = $a['id'];
+                    $to_attach = array();
 
-                    $this->log->log( array( 'msg' => array( 'ticket_attach', $a['original_name'], $this->trellis->input['subject'] ), 'type' => 'ticket', 'content_type' => 'ticket', 'content_id' => $ticket_id ) );
+                    foreach ( $attachments as $a )
+                    {
+                        $to_attach[] = $a['id'];
+
+                        $this->log->WriteLog( array( 'msg' => array( 'ticket_attach', $a['original_name'], $this->trellis->input['subject'] ), 'type' => 'ticket', 'content_type' => 'ticket', 'content_id' => $ticket_id ) );
+                    }
+
+                    $this->attachment->assign( $to_attach, $ticket_id );
                 }
-
-                $this->attachment->assign( $to_attach, $ticket_id );
             }
+
+            //Send Comms email if needed
+            $message = $this->ticket->prepare_ticket_notification($this->department);
+
+
+            $messageBody = $this->email->prepare_email($message);
+
+            $emailData['message_subject'] = "Ticket ID: " .$this->ticket->mask;
+            $emailData['message_body'] = $messageBody;
+
+            $userId = $this->ticket->ticketData['uid'];
+            $result = $this->bamboo_user->fetch_user_email_by_id($userId);
+
+            if($result)
+            {
+                $emailData['send_to'] = $this->bamboo_user->userEmail; //set from above
+            } else {
+                $emailData['send_to'] = $this->ticket->ticketData['email']; //this will need to be email provided in form.
+            }
+
+            //send the email
+            $this->email->send_email($emailData);
         }
+        
 
         #=============================
         # Redirect
@@ -3780,7 +3817,7 @@ class td_ad_tickets {
         #=============================
         # Upload File
         #=============================
-        $fileAttachmentObj = new \BambooDesk\Attachment($this->trellis->database, $this->trellis);
+        $fileAttachmentObj = new Attachment($this->trellis->database, $this->trellis);
         $this->trellis->load_functions('attachments');
         $ticketId = $this->trellis->input['tid'];
         //$file = $this->trellis->func->attachments->upload( $_FILES['Filedata'], array( 'content_type' => $this->trellis->input['type'] ), 'ajax' );

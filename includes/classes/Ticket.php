@@ -13,6 +13,8 @@ class Ticket
     public string $priorityName;
     private array $assigned_override;
 
+    public array $ticketData;
+
     public int $did;
     public int $uid;
     public string $email;
@@ -45,15 +47,17 @@ class Ticket
         $this->db = $db;
         $this->user = $user;
     }
-    public function prepare_ticket_notification(array $template_data) :string
+    public function prepare_ticket_notification(Department $ticketDepartment) :string
     {
-        $ticketId = $template_data['ticket_id'];
-        $ticketLink = $template_data['ticket_link'];
-        $department = $template_data['department_name'];
-        $priority =  $template_data['priority_level'];
-        $subject = $template_data['subject'];
-        $message = $template_data['ticket_message'];
-        $personName =  $template_data['person_name'];
+        // Email Notifications
+
+        $ticketId = $this->ticketData['ticket_id'];
+        $ticketLink = $this->trellis->config['hd_url'] .'/index.php?page=tickets&act=view&id='. $this->mask;
+        $department = $ticketDepartment->fetch_department_name_by_ticket_id($this->id);
+        $priority =  $this->fetch_ticket_priorty_level($this->id);
+        $subject = $this->ticketData['subject'];
+        $message = $this->ticketData['ticket_message'];
+        $personName =  $this->ticketData['person_name'];
 
         $html = "<p>Dear $personName,</p><p>A new guest ticket has been submitted on your behalf. Our staff will review your ticket shortly and reply accordingly.</p>
                 <p>---------------------------</p>
@@ -84,26 +88,26 @@ class Ticket
 
         return $this->priorityName = $this->db->runSql($sql, $data)->fetchColumn();
     }
-    public function create_admin_ticket(array $ticket): bool
+    public function create_admin_ticket(): bool
     {
-        $ticket['mask'] = uniqid('T');
-        $this->mask = $ticket['mask'];
+        //$ticket['mask'] = uniqid('T');
+        $this->mask = $this->ticketData['tid_mask'];
 
         try {
             $sql = "INSERT INTO " .$this->db->_dbPrefix."tickets (did, uid, email, subject, priority, message,
                                                                 date, last_reply, last_uid, ipadd, status, accepted, mask, name, lang, notify)
                                                           VALUES (:did, :uid, :email, :subject, :priority, :message,
                                                                 :date, :last_reply, :last_uid, :ipadd, :status, :accepted, :mask, :name, :lang, :notify)";
-        $this->db->runSql($sql, $ticket);
+        $this->db->runSql($sql, $this->ticketData);
         $this->id = $this->db->lastInsertedId;
 
         //Increment Department tickets count.
-        $this->increment_department_tickets_count($ticket['did']);
+        $this->increment_department_tickets_count($this->ticketData['did']);
 
         //Increment User Ticket Count.
-        if($ticket['uid'])
+        if($this->ticketData['uid'])
         {
-          $this->increment_user_tickets_count($ticket['uid']);
+          $this->increment_user_tickets_count($this->ticketData['uid']);
         }
 
         return true;

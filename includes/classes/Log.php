@@ -17,7 +17,7 @@ class Log
         $this->user = $user;
     }
 
-    public function log(array $params)
+    public function WriteLog(array $params)
     {
         if ( ! $this->settings['log']['enable'] ) return true;
 
