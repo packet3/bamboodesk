@@ -1022,53 +1022,8 @@ class td_ad_tickets {
     private function view_ticket($params=array())
     {
         $this->output = "";
+        $t = $this->ticket->fetch_ticket_by_ticket_id($this->trellis->user['id'], $this->trellis->input['id']);
 
-        #=============================
-        # Grab Ticket
-        #=============================
-        //clear array
-        $sql_select = array();
-        $sql_select[] = 't.*, g.gname, g.key, u.name AS uname, u.email AS uemail, u.ugroup, a.id AS aid, lr.name AS last_uname, at.id AS attachments';
-//        $sql_select = array(
-//            't'        => 'all',
-//            'g'        => array( 'gname', 'key' ),
-//             'u'        => array( array( 'name' => 'uname' ), array( 'email' => 'uemail' ), 'ugroup' ),
-//            'a'        => array( array( 'id' => 'aid' ) ),
-//            'lr'    => array( array( 'name' => 'last_uname' ) ),
-//            'at'    => array( array( 'id' => 'attachments' ) ),
-//        );
-
-
-        $sql_join = array();
-        $sql_join[] = 'tickets_guests g ON t.id = g.id';
-        $sql_join[] = 'users u ON t.uid = u.id';
-        $sql_join[] = 'assign_map a ON t.id = a.tid AND a.uid = '.$this->trellis->user['id'];
-        $sql_join[] = 'users lr ON t.last_uid = lr.id';
-        $sql_join[] = "attachments at ON at.content_type = 'ticket' AND at.content_id = t.id";
-//        $sql_join = array(
-//            array( 'from' => array( 'g' => 'tickets_guests' ), 'where' => array( 't' => 'id', '=', 'g' => 'id' ) ),
-//            array( 'from' => array( 'u' => 'users' ), 'where' => array( 't' => 'uid', '=', 'u' => 'id' ) ),
-//            array( 'from' => array( 'a' => 'assign_map' ), 'where' => array( array( 't' => 'id', '=', 'a' => 'tid' ), array( $this->trellis->user['id'], '=', 'a' => 'uid', 'and' ) ) ),
-//            array( 'from' => array( 'lr' => 'users' ), 'where' => array( 't' => 'last_uid', '=', 'lr' => 'id' ) ),
-//            array( 'from' => array( 'at' => 'attachments' ), 'where' => array( array( 'at' => 'content_type', '=', 'ticket' ), array( 'at' => 'content_id', '=', 't' => 'id', 'and' ) ) ),
-//        );
-
-        if ( $this->trellis->cache->data['settings']['ticket']['track'] )
-        {
-            $sql_select[] = 'tt.date AS track_date';
-            //$sql_select['tt'] = array( array( 'date' => 'track_date' ) );
-            $sql_join[] = "tickets_track tt ON tt.uid = ".$this->trellis->user['id']." AND tt.tid = t.id";
-            //$sql_join[] = array( 'from' => array( 'tt' => 'tickets_track' ), 'where' => array( array( 'tt' => 'uid', '=', $this->trellis->user['id'] ), array( 'tt' => 'tid', '=', 't' => 'id', 'and' ) ) );
-        }
-
-        $sqlWhereClause = "t.id = ". $this->trellis->input['id'];
-        $sql = $this->trellis->database->createSQLString($sql_select, "tickets t", $sqlWhereClause, null, null, null, $sql_join );
-        $t = $this->trellis->database->runSql($sql)->fetch();
-//        $t = $this->trellis->func->tickets->get_single_by_id( array(
-//            'select'    => $sql_select,
-//            'from'        => array( 't' => 'tickets' ),
-//            'join'        => $sql_join,
-//        ), $this->trellis->input['id'] );
 
         if ( ! $t ) $this->trellis->skin->error('no_ticket');
 
@@ -1091,22 +1046,9 @@ class td_ad_tickets {
         #=============================
         # Grab Replies
         #=============================
-        $sql = "SELECT r.*, u.name AS uname, u.signature AS usignature, u.sig_html, a.id AS attachments FROM replies r 
-                LEFT JOIN users u ON r.uid = u.id LEFT JOIN attachments a ON a.content_type = 'reply' AND a.content_id = r.id
-                WHERE r.tid = :id 
-                ORDER BY r.date ASC;";
-        $replies = $this->trellis->database->runSql($sql, $t['id']);
-//        $replies = $this->trellis->func->tickets->get( array(
-//                                                       'select'    => array(
-//                                                                            'r' => 'all',
-//                                                                            'u' => array( array( 'name' => 'uname' ), array( 'signature' => 'usignature' ), 'sig_html' ),
-//                                                                            'a' => array( array( 'id' => 'attachments' ) ),
-//                                                                            ),
-//                                                       'from'    => array( 'r' => 'replies' ),
-//                                                       'join'    => array( array( 'from' => array( 'u' => 'users' ), 'where' => array( 'r' => 'uid', '=', 'u' => 'id' ) ), array( 'from' => array( 'a' => 'attachments' ), 'where' => array( array( 'a' => 'content_type', '=', 'reply' ), array( 'a' => 'content_id', '=', 'r' => 'id', 'and' ) ) ) ),
-//                                                       'where'    => array( array( 'r' => 'tid' ), '=', $t['id'] ),
-//                                                       'order'    => array( 'date' => array( 'r' => 'asc' ) ),
-//                                                )       );
+
+        $replies = $this->ticket->fetch_ticket_replies($t['id']);
+
 
         #=============================
         # Prepare Output
@@ -3054,6 +2996,7 @@ class td_ad_tickets {
         $ticket['name'] = $u['name'];
         $ticket['lang'] = $this->trellis->input['lang'];
         $ticket['notify'] = $this->trellis->input['notify'];
+        $ticket['mask'] = $this->trellis->input['tid_mask'];
 
 
         $this->ticket->ticketData = $ticket;
@@ -3061,28 +3004,6 @@ class td_ad_tickets {
 
         if($result)
         {
-            #=============================
-            # Assign Attachments
-            #=============================
-            if ( is_array( $this->trellis->input['fuploads'] ) )
-            {
-                //$this->trellis->load_functions('attachments');
-
-                //if ( $attachments = $this->trellis->func->attachments->get( array( 'select' => array( 'id', 'original_name' ), 'where' => array( 'id', 'in', $this->trellis->input['fuploads'] ) ) ) )
-                if ($attachments = $this->attachment->get_attachments($this->trellis->input['fuploads'], "id"));
-                {
-                    $to_attach = array();
-
-                    foreach ( $attachments as $a )
-                    {
-                        $to_attach[] = $a['id'];
-
-                        $this->log->WriteLog( array( 'msg' => array( 'ticket_attach', $a['original_name'], $this->trellis->input['subject'] ), 'type' => 'ticket', 'content_type' => 'ticket', 'content_id' => $ticket_id ) );
-                    }
-
-                    $this->attachment->assign( $to_attach, $ticket_id );
-                }
-            }
 
             //Send Comms email if needed
             $message = $this->ticket->prepare_ticket_notification($this->department);
@@ -3114,9 +3035,9 @@ class td_ad_tickets {
 
         $this->trellis->send_message( 'alert', $this->trellis->lang['alert_ticket_added'] );
 
-        if ( $ticket->check_ticket_permission($ticket_id, $this->trellis->input['did'], 'v'))
+        if ( $this->ticket->check_ticket_permission($this->ticket->mask, $this->trellis->input['did'], 'v'))
         {
-            $this->trellis->skin->redirect( array( 'act' => 'view', 'id' => $ticket_id  ) );
+            $this->trellis->skin->redirect( array( 'act' => 'view', 'id' => $this->ticket->mask  ) );
         }
         else
         {

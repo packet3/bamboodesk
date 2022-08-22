@@ -91,7 +91,7 @@ class Ticket
     public function create_admin_ticket(): bool
     {
         //$ticket['mask'] = uniqid('T');
-        $this->mask = $this->ticketData['tid_mask'];
+        $this->mask = $this->ticketData['mask'];
 
         try {
             $sql = "INSERT INTO " .$this->db->_dbPrefix."tickets (did, uid, email, subject, priority, message,
@@ -278,5 +278,36 @@ class Ticket
 
         return true;
     }
+
+    public function fetch_ticket_by_ticket_id($userId, $ticketId) : array
+    {
+          $table_prefix = $this->db->_dbPrefix;
+
+
+
+
+        $sql = "SELECT t.*, g.gname, g.key, u.name AS uname, u.email AS uemail, u.ugroup, a.id AS aid, at.id AS attachments
+                FROM {$table_prefix}tickets t 
+                LEFT JOIN {$table_prefix}tickets_guests g ON t.id = g.id
+                LEFT JOIN {$table_prefix}users u ON t.uid = u.id
+                LEFT JOIN {$table_prefix}assign_map a ON t.id = a.tid AND a.uid = $userId
+                LEFT JOIN {$table_prefix}attachments at ON t.mask = at.ticket_id
+                WHERE t.mask = '$ticketId' ";
+
+            return $this->db->runSql($sql)->fetch();
+    }
+
+    public function fetch_ticket_replies($ticketId) : array
+    {
+        $table_prefix = $this->db->_dbPrefix;
+        $sql = "SELECT r.*, u.name AS uname, u.signature AS usignature, u.sig_html, a.id AS attachments 
+                FROM {$table_prefix}replies r 
+                LEFT JOIN {$table_prefix}users u ON r.uid = u.id 
+                LEFT JOIN {$table_prefix}attachments a ON a.content_type = 'reply' AND a.content_id = r.id
+                WHERE r.tid = :ticketId
+                ORDER BY r.date ASC;";
+        return $this->db->runSql($sql, $ticketId)->fetchAll();
+    }
+
 
 }
