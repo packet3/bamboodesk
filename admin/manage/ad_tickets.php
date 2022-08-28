@@ -1049,6 +1049,8 @@ class td_ad_tickets {
 
         $replies = $this->ticket->fetch_ticket_replies($t['id']);
 
+        //admin.php?section=manage&page=tickets&act=view&id=TT7044ce09
+
 
         #=============================
         # Prepare Output
@@ -1171,9 +1173,9 @@ class td_ad_tickets {
 
         $this->trellis->load_functions('cdfields');
 
-        if ( $cdfields = $this->trellis->func->cdfields->grab( $t['did'] ) )
+        if ( $cdfields = $this->department->get_custom_department_fields_by_id($t['did']))
         {
-            $fdata = $this->trellis->func->cdfields->get_data( $t['id'] );
+            $fdata = $this->ticket->get_custom_fields_by_ticket_id( $t['id'] );
 
             foreach( $cdfields as $fid => $f )
             {
@@ -1237,10 +1239,10 @@ class td_ad_tickets {
         if ( $t['attachments'] )
         {
             $this->trellis->load_functions('attachments');
-            $sql = "SELECT ";
-            //if ( $attachments = $this->trellis->func->attachments->get( array( 'select' => array( 'id', 'original_name', 'size' ), 'where' => array( array( 'content_type', '=', 'ticket' ), array( 'content_id', '=', $t['id'], 'and' ) ) ) ) )
+
+
             $ticketId = $t['id'];
-            if ( $attachments = $this->trellis->func->attachments->get($ticketId))
+            if ( $attachments =  $this->attachment->get_attachments_assigned_to_ticket($ticketId))
             {
                 $attach_links = array();
 
@@ -1259,7 +1261,7 @@ class td_ad_tickets {
         $this->trellis->load_functions('users');
 
         // Convert For Humans
-        if ( $this->trellis->func->tickets->check_assignment( $this->trellis->user['id'], $t['id'] ) )
+        if ( $this->ticket->check_assignment( $this->trellis->user['id'], $t['id'] ) )
         {
             $t['priority_human'] = "<img src='<! TD_URL !>/images/priorities/{$this->trellis->cache->data['priorities'][ $t['priority'] ]['icon_assigned']}' alt='{$this->trellis->cache->data['priorities'][ $t['priority'] ]['name']}' class='prioritybox' style='vertical-align:middle' />&nbsp;&nbsp;<a href='". $this->generate_url( array( 'fpriority' => array( $t['priority'] ) ) ) ."'>{$this->trellis->cache->data['priorities'][ $t['priority'] ]['name']}</a>";
         }
@@ -1442,7 +1444,7 @@ class td_ad_tickets {
                         });";
         }
 
-        if ( $this->trellis->cache->data['settings']['ticket']['track'] )
+        if ( $this->trellis->settings['ticket']['track'] )
         {
             $unread_found = false;
 
@@ -1519,7 +1521,7 @@ class td_ad_tickets {
         # Replies
         #=============================
 
-        $reply_untrack = ( $this->trellis->cache->data['settings']['ticket']['track'] ) ? 1 : 0;
+        $reply_untrack = ( $this->trellis->settings['ticket']['track'] ) ? 1 : 0;
 
         if ( ! empty( $replies ) )
         {
@@ -1622,7 +1624,7 @@ class td_ad_tickets {
                 {
                     $this->trellis->load_functions('attachments');
 
-                    if ( $attachments = $this->trellis->func->attachments->get( array( 'select' => array( 'id', 'original_name', 'size' ), 'where' => array( array( 'content_type', '=', 'reply' ), array( 'content_id', '=', $r['id'], 'and' ) ) ) ) )
+                    if ( $attachments = $this->attachment->fetch_attachments_assigned_to_ticket_reply($r['id']))
                     {
                         $r['message'] .= "<p class='attachments'>{lang.attachments}: ";
 
@@ -1637,7 +1639,7 @@ class td_ad_tickets {
                     }
                 }
 
-                if ( $this->trellis->cache->data['settings']['ticket']['track'] && ( $t['track_date'] < $r['date'] ) ) $this->output .= "<img src='<! IMG_DIR !>/icons/balloon.png' alt='*' title='{lang.unread}' style='vertical-align:top;' />&nbsp;";
+                if ( $this->trellis->settings['ticket']['track'] && ( $t['track_date'] < $r['date'] ) ) $this->output .= "<img src='<! IMG_DIR !>/icons/balloon.png' alt='*' title='{lang.unread}' style='vertical-align:top;' />&nbsp;";
 
                 $this->output .= "<a href='<! TD_URL !>/admin.php?section=manage&amp;page=users&amp;act=view&amp;id={$r['uid']}' title='{$r['ipadd']}'><strong>{$r['uname']}</strong></a> -- {$r['date_human']}</div>
                                 <div class='roll{$rclass}' id='rm{$r['id']}'>
@@ -1739,7 +1741,8 @@ class td_ad_tickets {
             // array( array( 'l' => 'content_type' ), '=', 'reply', 'and' ),
             // array( array( 'l' => 'content_id' ), 'in', array_keys( $replies ), 'and' ), 'or' ) );
         }
-        $sql = "SELECT l.*, u.name AS uname FROM logs l ".$sql_where." ORDER BY l.date DESC, l.id DESC LIMIT BY 0 15";
+
+        $sql = "SELECT l.*, u.name AS uname FROM td_logs l ".$sql_where." ORDER BY l.date DESC, l.id DESC LIMIT 0, 15";
 //        $this->trellis->db->construct( array(
 //                                                   'select'    => array(
 //                                                                        'l' => 'all',
@@ -1755,28 +1758,28 @@ class td_ad_tickets {
 
         //$this->trellis->db->execute();
 
-        while( $l = $this->trellis->database->runSql($sql, $arguments)->fetchAll())
-        {
-            $l['date'] = $this->trellis->td_timestamp( array( 'time' => $l['date'], 'format' => 'short' ) );
-
-            if ( $l['level'] == 2 )
-            {
-                $fontcolor_start = "<font color='#790000'>";
-                $fontcolor_end = "<font color='#790000'>";
-            }
-            else
-            {
-                $fontcolor_start = "";
-                $fontcolor_end = "";
-            }
-
-            $this->output .= "<tr>
-                                <td class='slatecell-light' width='38%'>{$fontcolor_start}{$l['action']}{$fontcolor_end}</td>
-                                <td class='slatecell-dark' width='16%' style='font-weight:normal'>{$fontcolor_start}{$l['date']}{$fontcolor_end}</td>
-                                <td class='slatecell-light' width='19%'><a href='<! TD_URL !>/admin.php?section=manage&amp;page=users&amp;act=view&amp;id={$l['uid']}'>{$fontcolor_start}{$l['uname']}{$fontcolor_end}</a></td>
-                                <td class='slatecell-light' width='17%' style='font-weight:normal'>{$fontcolor_start}{$l['ipadd']}{$fontcolor_end}</td>
-                            </tr>";
-        }
+//        while( $l = $this->trellis->database->runSql($sql, $arguments)->fetchAll())
+//        {
+//            $l['date'] = $this->trellis->td_timestamp( array( 'time' => $l['date'], 'format' => 'short' ) );
+//
+//            if ( $l['level'] == 2 )
+//            {
+//                $fontcolor_start = "<font color='#790000'>";
+//                $fontcolor_end = "<font color='#790000'>";
+//            }
+//            else
+//            {
+//                $fontcolor_start = "";
+//                $fontcolor_end = "";
+//            }
+//
+//            $this->output .= "<tr>
+//                                <td class='slatecell-light' width='38%'>{$fontcolor_start}{$l['action']}{$fontcolor_end}</td>
+//                                <td class='slatecell-dark' width='16%' style='font-weight:normal'>{$fontcolor_start}{$l['date']}{$fontcolor_end}</td>
+//                                <td class='slatecell-light' width='19%'><a href='<! TD_URL !>/admin.php?section=manage&amp;page=users&amp;act=view&amp;id={$l['uid']}'>{$fontcolor_start}{$l['uname']}{$fontcolor_end}</a></td>
+//                                <td class='slatecell-light' width='17%' style='font-weight:normal'>{$fontcolor_start}{$l['ipadd']}{$fontcolor_end}</td>
+//                            </tr>";
+//        }
 
         $this->output .= "</table>
                         </div>
@@ -1874,7 +1877,7 @@ class td_ad_tickets {
         $assign_items = '';
         $assign_used = 0;
 
-        if ( $assignments = $this->trellis->func->tickets->get_assignments( $t['id'] ) )
+        if ( $assignments = $this->ticket->fetch_ticket_assignments( $t['id'] ) )
         {
             foreach( $assignments as $a )
             {
@@ -1958,7 +1961,7 @@ class td_ad_tickets {
         # Tracking
         #=============================
 
-        if ( $this->trellis->cache->data['settings']['ticket']['track'] ) $this->trellis->func->tickets->track( $t['id'], $t['track_date'] );
+        if ( $this->trellis->settings['ticket']['track'] ) $this->ticket->track( $t['id'], $this->trellis->user['id'], $t['track_date'] );
 
         #=============================
         # Do Output
@@ -2998,8 +3001,22 @@ class td_ad_tickets {
         $ticket['notify'] = $this->trellis->input['notify'];
         $ticket['mask'] = $this->trellis->input['tid_mask'];
 
+        // Handle Custom Fields
+
+        $customFields = [];
+        foreach($this->trellis->input  as $index => $val)
+        {
+
+            if ( substr($index, 0, 4) == "cdf_")
+            {
+                $customFieldId = substr($index, 4);
+                $customFields[$customFieldId] = $val;
+            }
+        }
+
 
         $this->ticket->ticketData = $ticket;
+        $this->ticket->customTicketFields = $customFields;
         $result  = $this->ticket->create_admin_ticket();
 
         if($result)

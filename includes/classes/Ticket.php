@@ -14,6 +14,7 @@ class Ticket
     private array $assigned_override;
 
     public array $ticketData;
+    public array $customTicketFields;
 
     public int $did;
     public int $uid;
@@ -101,6 +102,13 @@ class Ticket
         $this->db->runSql($sql, $this->ticketData);
         $this->id = $this->db->lastInsertedId;
 
+        //Insert custom fields data
+        if (count($this->customTicketFields) > 0)
+        {
+            $this->add_custom_ticket_fields_data($this->ticketData['uid']);
+        }
+
+
         //Increment Department tickets count.
         $this->increment_department_tickets_count($this->ticketData['did']);
 
@@ -118,6 +126,27 @@ class Ticket
             throw $e;
         }
 
+
+    }
+    private function add_custom_ticket_fields_data($userId)
+    {
+        $table = $this->db->_dbPrefix."depart_fields_data";
+        if (count($this->customTicketFields) > 0)
+        {
+            foreach($this->customTicketFields as $index => $val)
+            {
+                $data = [];
+                $data['fid'] = $index;
+                $data['tid'] = $this->id;
+                $data['uid'] = $userId;
+                $data['data'] = $val;
+
+                $sql = "INSERT INTO $table (fid, tid, uid, data) VALUES (:fid, :tid, :uid, :data)";
+
+                $this->db->runSql($sql, $data);
+
+            }
+        }
 
     }
 
@@ -193,13 +222,13 @@ class Ticket
         if ( ! $uid = intval( $uid ) ) return false;
         if ( ! $tid = intval( $tid ) ) return false;
 
+        $table = $this->db->_dbPrefix."assign_map";
         $data = [];
         $data['tid'] = $tid;
         $data['uid'] = $uid;
-        $data['offset'] = 0;
-        $data['row_count'] = 1;
 
-        $sql = "SELECT id FROM assign_map WHERE tid = :tid AND uid = :uid";
+
+        $sql = "SELECT id FROM $table WHERE tid = :tid AND uid = :uid";
         return count($this->db->runSql($sql, $data)->fetchAll());
 
     }
@@ -303,11 +332,119 @@ class Ticket
         $sql = "SELECT r.*, u.name AS uname, u.signature AS usignature, u.sig_html, a.id AS attachments 
                 FROM {$table_prefix}replies r 
                 LEFT JOIN {$table_prefix}users u ON r.uid = u.id 
-                LEFT JOIN {$table_prefix}attachments a ON a.content_type = 'reply' AND a.content_id = r.id
+                LEFT JOIN {$table_prefix}attachments a ON a.ticket_reply_id = r.id
                 WHERE r.tid = :ticketId
                 ORDER BY r.date ASC;";
         return $this->db->runSql($sql, $ticketId)->fetchAll();
     }
+
+    public function get_custom_fields_by_ticket_id($ticketId)
+    {
+        $data = [];
+        $table = $this->db->_dbPrefix."depart_fields_data";
+        $sql = "SELECT fid, data ,extra FROM $table WHERE tid = $ticketId";
+
+        $results = $this->db->runSql($sql)->fetchAll();
+
+
+        if ( ! $results) return false;
+
+        foreach ($results as $result)
+        {
+            if ( $result['extra'] )
+            {
+                $data[ $result['fid'] ][ $result['extra'] ] = $result['data'];
+            }
+            else
+            {
+                $data[ $result['fid'] ] = $result['data'];
+            }
+        }
+
+        return $data;
+    }
+
+    public function fetch_ticket_assignments($tid, $key='id')
+    {
+        if ( ! $tid = intval( $tid ) ) return false;
+        $return = [];
+        $data = [];
+        $data['tid'] = $tid;
+
+
+        $table = $this->db->_dbPrefix."assign_map a";
+        $joinTable = $this->db->_dbPrefix."users u";
+        $sql = "SELECT a.id, a.uid, u.name AS uname
+                FROM $table
+                LEFT JOIN $joinTable ON a.uid = u.id 
+                WHERE a.tid = :tid
+                GROUP BY a.uid
+                ORDER BY u.name ASC";
+
+
+
+
+        if ( ! count($this->db->runSql($sql, $data)->fetchAll()) ) return false;
+
+        while ( $a = $this->db->runSql($sql, $data)->fetch())
+        {
+            $return[ $a[ $key ] ] = $a;
+        }
+
+        return $return;
+    }
+
+    public function track($id, $uid, $last_date=null)
+    {
+        if ( ! $id = intval( $id ) ) return false;
+
+        $table = $this->db->_dbPrefix."tickets_track";
+
+        if ( ! isset( $last_date ) )
+        {
+            $data = [];
+            $data['id'] = $id;
+            $data['uid'] = $uid;
+
+            $sql = "SELECT date FROM $table WHERE tid = :id AND uid = :uid LIMIT 0, 1";
+
+            if ( count($this->db->runSql($sql, $data)->fetchAll()) )
+            {
+                $t = $this->db->runSql($sql, $data)->fetch();
+
+                $last_date = $t['date'];
+            }
+        }
+
+        if ( isset( $last_date ) )
+        {
+            $data = [];
+            $data['id'] = $id;
+            $data['uid'] = $uid;
+            $data['time'] = time();
+
+            $sql = "UPDATE $table
+                    SET date = :time
+                    WHERE tid = :id AND uid = :uid";
+
+            return $this->db->runSql($sql, $data)->rowCount();
+        }
+        else
+        {
+            $data = [];
+            $data['id'] = $id;
+            $data['uid'] = $uid;
+            $data['time'] = time();
+
+            $sql = "INSERT INTO $table (tid, uid, date) VALUES (:id, :uid, :time)";
+            return $this->db->runSql($sql, $data)->rowCount();
+
+        }
+
+    }
+
+
+
 
 
 }

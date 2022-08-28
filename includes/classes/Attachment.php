@@ -152,4 +152,22 @@ class Attachment
 
         return $insertedId;
     }
+
+    public function get_attachments_assigned_to_ticket($ticketId)
+    {
+        $table = $this->db->_dbPrefix."attachments";
+        $data['ticketId'] = $ticketId;
+        $sql = "SELECT id, original_name, size FROM $table WHERE ticket_id = :ticketId";
+        return $this->db->runSql($sql, $data)->fetchAll();
+
+    }
+
+
+    public function fetch_attachments_assigned_to_ticket_reply($replyId)
+    {
+        $table = $this->db->_dbPrefix."attachments";
+        $data['ticket_reply_Id'] = $replyId;
+        $sql = "SELECT id, original_name, size FROM $table WHERE ticket_reply_id = :ticket_reply_Id";
+        return $this->db->runSql($sql, $data)->fetchAll();
+    }
 }
