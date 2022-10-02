@@ -87,7 +87,7 @@ class td_ad_statuses {
 
         $status_rows = "";
 
-        if ( ! $statuses = $this->trellis->func->statuses->get( array( 'select' => array( 'id', 'name_staff', 'name_user', 'type', 'default' ), 'order' => array( 'position' => 'asc' ) ) ) )
+        if ( ! $statuses = $this->trellis->func->statuses->get( array( 'select' => array( 'id', 'name', 'name', 'type', 'default' ), 'order' => array( 'position' => 'asc' ) ) ) )
         {
             $status_rows .= "<tr><td class='bluecell-light' colspan='6'><strong><a href='<! TD_URL !>/admin.php?section=manage&amp;page=statuses&amp;act=add'>{lang.no_statuses}</a></strong></td></tr>";
         }

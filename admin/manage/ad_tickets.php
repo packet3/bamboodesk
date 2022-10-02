@@ -27,6 +27,8 @@ class td_ad_tickets {
     private Department $department;
     private Email $email;
     private User $bamboo_user;
+    private $sqlOrderBy = "";
+    private $sqlWhere = "";
 
 
 
@@ -260,6 +262,7 @@ class td_ad_tickets {
                     $link_order = 'asc';
                     $img_order = '&nbsp;<img src="<! IMG_DIR !>/arrow_down.gif" alt="{lang.down}" />';
                     $sql_order = 'desc';
+
                 }
                 else
                 {
@@ -270,48 +273,39 @@ class td_ad_tickets {
 
                 if ( $name == 'department' )
                 {
-                    $sql_sort_table = 'd';
-                    $sql_sort_field = 'name';
+                  $this->build_sql_order_by("d.name $sql_order");
                 }
                 elseif ( $name == 'priority' )
                 {
-                    $sql_sort_table = 'p';
-                    $sql_sort_field = 'position';
+                    $this->build_sql_order_by("p.position $sql_order");
                 }
                 elseif ( $name == 'reply' )
                 {
-                    $sql_sort_table = 't';
-                    $sql_sort_field = 'last_reply';
+                    $this->build_sql_order_by("t.last_reply $sql_order");
                 }
                 elseif ( $name == 'replystaff' )
                 {
-                    $sql_sort_table = 't';
-                    $sql_sort_field = 'last_reply_staff';
+                    $this->build_sql_order_by("t.last_reply_staff $sql_order");
                 }
                 elseif ( $name == 'lastuname' )
                 {
-                    $sql_sort_table = 'ulr';
-                    $sql_sort_field = 'name';
+                    $this->build_sql_order_by("ulr.name $sql_order");
                 }
                 elseif ( $name == 'status' )
                 {
-                    $sql_sort_table = 's';
-                    $sql_sort_field = 'name_staff';
+                    $this->build_sql_order_by("s.name $sql_order");
                 }
                 elseif ( $name == 'submitter' )
                 {
-                    $sql_sort_table = 'u';
-                    $sql_sort_field = 'name';
+                    $this->build_sql_order_by("u.name $sql_order");
                 }
                 elseif ( strpos( $name, 'cfd' ) === 0 || strpos( $name, 'cfp' ) === 0 )
                 {
-                    $sql_sort_table = $name;
-                    $sql_sort_field = 'data';
+                    $this->build_sql_order_by("$name.data $sql_order");
                 }
                 else
                 {
-                    $sql_sort_table = 't';
-                    $sql_sort_field = $name;
+                    $this->build_sql_order_by("t.$name $sql_order");
                 }
             }
             else
@@ -331,112 +325,7 @@ class td_ad_tickets {
 
             $this->output .= "<th class='bluecellthin-th' width='{$width}%' align='left'><a href='". $this->generate_url( array( 'sort' => $name, 'order' => $link_order ) ) ."'>{$lang_columns[ $name ]}{$img_order}</a></th>";
 
-            if ( $name == 'department' )
-            {
 
-                $sql_select[] = 'd.name as dname,t.did';
-                //$sql_select['d'] = array( array( 'name' => 'dname' ) );
-                $sql_join[] = 'departments d ON t.did = d.id';
-
-                //$sql_join[] = array( 'from' => array( 'd' => 'departments' ), 'where' => array( 't' => 'did', '=', 'd' => 'id' ) );
-            }
-            elseif ( $name == 'priority' )
-            {
-
-                $sql_select[] = 'p.name as pname, p.icon_regular, p.icon_assigned, t.priority';
-                //$sql_select['p'] = array( array( 'name' => 'pname' ), 'icon_regular', 'icon_assigned' );
-
-                $sql_join[] = 'priorities p ON t.priority = p.id';
-                //$sql_join[] = array( 'from' => array( 'p' => 'priorities' ), 'where' => array( 't' => 'priority', '=', 'p' => 'id' ) );
-            }
-            elseif ( $name == 'status' )
-            {
-
-                $sql_select[] = 's.name_staff, s.abbr_staff, t.status';
-                //$sql_select['s'] = array( 'name_staff', 'abbr_staff' );
-
-                $sql_join[] = 'statuses s ON t.status = s.id';
-                //$sql_join[] = array( 'from' => array( 's' => 'statuses' ), 'where' => array( 't' => 'status', '=', 's' => 'id' ) );
-            }
-            elseif ( $name == 'submitter' )
-            {
-                //$sql_select['u'][] = array( 'name' => 'uname' );
-                //$sql_select['g'][] = 'gname';
-
-
-                $sql_select[] = 'g.gname, u.name as uname, t.email';
-
-
-                $sql_join[] = 'tickets_guests g ON t.id = g.id';
-                //$sql_join[] = array( 'from' => array( 'g' => 'tickets_guests' ), 'where' => array( 't' => 'id', '=', 'g' => 'id' ) );
-
-                if ( ! $user_table_join )
-                {
-                    $sql_join[] = 'users u ON t.id = u.id';
-                    //$sql_join[] = array( 'from' => array( 'u' => 'users' ), 'where' => array( 't' => 'uid', '=', 'u' => 'id' ) );
-
-                    $sql_select[] = 't.uid';
-                }
-
-                $user_table_join = 1;
-            }
-            elseif ( $name == 'lastuname' )
-            {
-//                $sql_select['ulr'] = array( array( 'name' => 'last_uname' ) );
-//                $sql_select['g'][] = 'gname';
-
-                $sql_select[] = 'g.gname, ulr.name as last_uname';
-                $sql_select[] = 't.email';
-
-                $sql_join[] = 'tickets_guests g ON t.id = g.id';
-                $sql_join[] = 'users ulr ON t.last_uid = ulr.id';
-                //$sql_join[] = array( 'from' => array( 'g' => 'tickets_guests' ), 'where' => array( 't' => 'id', '=', 'g' => 'id' ) );
-                //$sql_join[] = array( 'from' => array( 'ulr' => 'users' ), 'where' => array( 't' => 'last_uid', '=', 'ulr' => 'id' ) );
-
-                $sql_select[] = 't.last_uid';
-            }
-            elseif ( $name == 'uemail' )
-            {
-                $sql_select[] = 'u.email AS uemail';
-                //$sql_select['u'][] = array( 'email' => 'uemail' );
-
-                if ( ! $user_table_join )
-                {
-                    $sql_join[] = 'users u ON t.uid = u.id';
-                    //$sql_join[] = array( 'from' => array( 'u' => 'users' ), 'where' => array( 't' => 'uid', '=', 'u' => 'id' ) );
-
-                    $sql_select[] = 't.uid';
-                }
-
-                $user_table_join = 1;
-            }
-            elseif ( strpos( $name, 'cfd' ) === 0 )
-            {
-                $sql_select[] = "$name.data AS $name";
-                //$sql_select[ $name ] = array( array( 'data' => $name ) );
-                $sql_join[] = "depart_fields_data $name ON t.id = $name.tid AND $name.fid =".substr( $name, 3 );
-                //$sql_join[] = array( 'from' => array( $name => 'depart_fields_data' ), 'where' => array( array( 't' => 'id', '=', $name => 'tid' ), array( $name => 'fid', '=', substr( $name, 3 ) ) ) );
-            }
-            elseif ( strpos( $name, 'cfp' ) === 0 )
-            {
-                $sql_select[] = "$name.data AS $name";
-                //$sql_select[ $name ] = array( array( 'data' => $name ) );
-                $sql_join[] = "profile_fields_data $name ON t.uid = $name.uid AND $name.fid = ".substr( $name, 3 );
-                //$sql_join[] = array( 'from' => array( $name => 'profile_fields_data' ), 'where' => array( array( 't' => 'uid', '=', $name => 'uid' ), array( $name => 'fid', '=', substr( $name, 3 ) ) ) );
-            }
-            else
-            {
-                if ( $name == 'reply' )
-                {
-                    $name = 'last_reply';
-                }
-                elseif ( $name == 'replystaff' )
-                {
-                    $name = 'last_reply_staff';
-                }
-
-                $sql_select[] = 't.'.$name;
-            }
         }
 
         $this->output .= "<th class='bluecellthin-th' width='1%' align='center'><input name='checkall' id='checkall' type='checkbox' value='1' /></th>
@@ -488,35 +377,27 @@ class td_ad_tickets {
         if ( $this->trellis->input['noguest'] )
         {
             $filters[] = 't.uid != 0';
-            //$filters[] = array( array( 't' => 'uid' ), '!=', 0 );
+
         }
 
         if ( $this->trellis->input['assigned'] )
         {
-            $sql_join[] = "assign_map a ON t.id = a.tid AND a.uid = ".$this->trellis->input['assigned'];
-            //$sql_join[] = array( 'from' => array( 'a' => 'assign_map' ), 'where' => array( array( 't' => 'id', '=', 'a' => 'tid' ), array( $this->trellis->input['assigned'], '=', 'a' => 'uid', 'and' ) ) );
+            //$this->trellis->user['id'];
+            $filters[] = 't.uid = '.$this->trellis->input['assigned'];
 
-            $filters[] = 'a.uid = '.$this->trellis->input['assigned'];
-            //$filters[] = array( array( 'a' => 'uid' ), '=', $this->trellis->input['assigned'] );
         }
-        elseif ( $this->trellis->input['unassigned'] )
-        {
-            $sql_join[] = 'assign_map a ON t.id = a.tid';
-            //$sql_join[] = array( 'from' => array( 'a' => 'assign_map' ), 'where' => array( 't' => 'id', '=', 'a' => 'tid' ) );
 
-            $filters[] = 'a.uid is null';
-            //$filters[] = array( array( 'a' => 'uid' ), 'is', 'null' );
-        }
-        else
+        if ( $this->trellis->input['unassigned'] )
         {
-            $sql_join[] = "assign_map a ON t.id = a.tid AND a.uid = ". $this->trellis->user['id'];
-            //$sql_join[] = array( 'from' => array( 'a' => 'assign_map' ), 'where' => array( array( 't' => 'id', '=', 'a' => 'tid' ), array( $this->trellis->user['id'], '=', 'a' => 'uid', 'and' ) ) );
+
+            $filters[] = 't.uid is null';
+
         }
 
         if ( $this->trellis->input['escalated'] )
         {
             $filters[] = 't.escalated = 1';
-            //$filters[] = array( array( 't' => 'escalated' ), '=', 1 );
+
         }
 
         if ( $this->trellis->input['field'] )
@@ -528,25 +409,17 @@ class td_ad_tickets {
             if ( in_array( $this->trellis->input['field'], $strict_fields ) && ! $this->trellis->input['loose'] )
             {
                 $filters[] = "t.".$this->trellis->input['field']." = ".$this->trellis->input['search'];
-                //$filters[] = array( array( 't' => $this->trellis->input['field'] ), '=', $this->trellis->input['search'] );
+
             }
             elseif ( $user_fields[ $this->trellis->input['field'] ] )
             {
                 $filters[] = "u.".$user_fields[ $this->trellis->input['field'] ]." LIKE %".addcslashes( $this->trellis->input['search'], '%_' )."%";
-                //$filters[] = array( array( 'u' => $user_fields[ $this->trellis->input['field'] ] ), 'like', '%'. addcslashes( $this->trellis->input['search'], '%_' ) .'%' );
 
-                if ( ! $user_table_join )
-                {
-                    $sql_join[] = 'users u ON t.uid = u.id';
-                    //$sql_join[] = array( 'from' => array( 'u' => 'users' ), 'where' => array( 't' => 'uid', '=', 'u' => 'id' ) );
-
-                    $sql_select[] = 't.uid';
-                }
             }
             else
             {
                 $filters[] = "t.".$this->trellis->input['field']." LIKE %".addcslashes( $this->trellis->input['search'], '%_' )."%";
-                //$filters[] = array( array( 't' => $this->trellis->input['field'] ), 'like', '%'. addcslashes( $this->trellis->input['search'], '%_' ) .'%' );
+
             }
         }
 
@@ -554,7 +427,7 @@ class td_ad_tickets {
         {
             $filterString = $this->trellis->database->buildFilterString($this->trellis->input['fstatus'], "IN");
             $filters[] = "t.status " .$filterString;
-            //$filters[] = array( array( 't' => 'status' ), 'in', $this->trellis->input['fstatus'] );
+
         }
 
         if ( is_array( $this->trellis->input['fdepart'] ) )
@@ -562,7 +435,6 @@ class td_ad_tickets {
             $filterString = $this->trellis->database->buildFilterString($this->trellis->input['fdepart'], "IN");
             $filters[] = "t.did " .$filterString;
 
-            //$filters[] = array( array( 't' => 'did' ), 'in', $this->trellis->input['fdepart'] );
         }
 
         if ( is_array( $this->trellis->input['fpriority'] ) )
@@ -570,18 +442,15 @@ class td_ad_tickets {
             $filterString = $this->trellis->database->buildFilterString($this->trellis->input['fpriority'], "IN");
             $filters[] = "t.priority " .$filterString;
 
-            //$filters[] = array( array( 't' => 'priority' ), 'in', $this->trellis->input['fpriority'] );
+
         }
 
         if ( is_array( $this->trellis->input['fflag'] ) )
         {
             foreach ( $this->trellis->input['fflag'] as $fid => $ff )
             {
-                $sql_join[] = "flags_map f$fid ON t.id = f$fid.tid AND f$fid.fid = $ff";
-                //$sql_join[] = array( 'from' => array( 'f'. $fid => 'flags_map' ), 'where' => array( array( 't' => 'id', '=', 'f'. $fid => 'tid' ), array( $ff, '=', 'f'. $fid => 'fid', 'and' ) ) );
-
                 $filters[] = "f$fid.fid = $ff";
-                //$filters[] = array( array( 'f'. $fid => 'fid' ), '=', $ff );
+
             }
         }
 
@@ -604,18 +473,32 @@ class td_ad_tickets {
             if ( empty( $perms ) ) $perms[] = 0;
 
             $filters[] = "t.did IN ('".$perms."') OR a.uid = ".$this->trellis->user['id'];
-            //$filters[] = array( array( array( 't' => 'did' ), 'in', $perms ), array( array( 'a' => 'uid' ), '=', $this->trellis->user['id'], 'or' ) );
+
         }
 
         #=============================
         # Grab Tickets
         #=============================
-
+        $totalFilters = count($filters);
+        $counter = 0;
         foreach( $filters as $fdata )
         {
-            if ( ! empty( $sql_where ) ) $fdata[] = 'and';
+            $counter ++;
+           if($totalFilters > 1)
+           {
+               $this->sqlWhere.= "$fdata AND ";
+               if($counter == $totalFilters)
+               {
+                   //remove AND from end of last string.
+                   $this->sqlWhere = substr($this->sqlWhere, 0, -4);
+               }
+           } else {
+               $this->sqlWhere .= $fdata;
+           }
 
-            $sql_where[] = $fdata;
+
+
+
         }
 
         $sql_select[] = 't.escalated';
@@ -639,7 +522,18 @@ class td_ad_tickets {
 
         $ticket_rows = '';
 
-        $sql = $this->trellis->database->createSQLString("t.id", "tickets t", $sql_where, null, null, null, null, $sql_join);
+
+        //$sql = $this->trellis->database->createSQLString("t.id", "tickets t", $sql_where, null, null, null, null, $sql_join);
+        $sql = "SELECT T.id, mask, subject, TP.name AS pname,TP.icon_regular,  TD.name AS dname, last_reply, TS.name AS status
+                FROM bamboodesk.td_tickets T
+                INNER JOIN bamboodesk.td_priorities TP
+                ON priority = TP.id
+                INNER JOIN bamboodesk.td_departments TD
+                ON T.did = TD.id
+                INNER JOIN bamboodesk.td_statuses TS
+                ON T.status = TS.id
+                WHERE 1 = 1
+                AND ".$this->sqlWhere;
         $t_total = $this->trellis->database->runSql($sql)->fetch();
 //        $t_total = $this->trellis->func->tickets->get( array(
 //                                                       'select'    => array( 't' => array( 'id' ) ),
@@ -655,8 +549,8 @@ class td_ad_tickets {
             $this->list_tickets();
         }
 
-        $sql = $this->trellis->database->createSQLString($sql_select, "tickets t", $sql_where, $this->trellis->input['st'].'15', $sql_sort_table
-                                                        , $sql_sort_field, $sql_order, $sql_join);
+        //$sql = $this->trellis->database->createSQLString($sql_select, "tickets t", $sql_where, $this->trellis->input['st'].'15', $sql_sort_table
+                                                        //, $sql_sort_field, $sql_order, $sql_join);
         $tickets = $this->trellis->database->runSql($sql)->fetchAll();
 //        $tickets = $this->trellis->func->tickets->get( array(
 //                                                       'select'    => $sql_select,
@@ -726,7 +620,7 @@ class td_ad_tickets {
                     }
                     elseif ( $name == 'status' )
                     {
-                        ( $t['abbr_staff'] ) ? $name = 'abbr_staff' : $name = 'name_staff';
+                        ( $t['status'] ) ? $name = 'status' : $name = 'name';
                     }
 
                     ( in_array( $name, $dark_columns ) ) ? $dark = 1 : $dark = 0;
@@ -774,7 +668,7 @@ class td_ad_tickets {
                         $ticket_rows .= "<a href='". $this->generate_url( array( 'fpriority' => array( $t['priority'] ), 'fstatus' => '', 'fdepart' => '', 'fflag' => '', 'cf' => 0 ) ) ."'>";
                     }
 
-                    if ( $name == 'abbr_staff' || $name == 'name_staff' ) $ticket_rows .= "<a href='". $this->generate_url( array( 'fstatus' => array( $t['status'] ), 'fdepart' => '', 'fpriority' => '', 'fflag' => '', 'cf' => 0 ) ) ."'>";
+                    if ( $name == 'abbr' || $name == 'name' ) $ticket_rows .= "<a href='". $this->generate_url( array( 'fstatus' => array( $t['status'] ), 'fdepart' => '', 'fpriority' => '', 'fflag' => '', 'cf' => 0 ) ) ."'>";
 
                     if ( strpos( $name, 'cfd' ) === 0 || strpos( $name, 'cfp' ) === 0 )
                     {
@@ -799,7 +693,7 @@ class td_ad_tickets {
 
                     if ( $name == 'id' ) $ticket_rows .= "</strong>";
 
-                    if ( $name == 'id' || $name == 'subject' || $name == 'pname' || $name == 'abbr_staff' || $name == 'name_staff' ) $ticket_rows .= "</a>";
+                    if ( $name == 'id' || $name == 'subject' || $name == 'pname' || $name == 'abbr' || $name == 'name' ) $ticket_rows .= "</a>";
 
                     $ticket_rows .= "</td>";
                 }
@@ -845,7 +739,7 @@ class td_ad_tickets {
                 if ( in_array( $s['id'], $this->trellis->input['fstatus'] ) ) $status_items[ $s['id'] ] .= " checked='checked'";
             }
 
-            $status_items[ $s['id'] ] .= " />&nbsp;&nbsp;<label for='fs_". $s['id'] ."'>". $s['name_staff'] ."</label>";
+            $status_items[ $s['id'] ] .= " />&nbsp;&nbsp;<label for='fs_". $s['id'] ."'>". $s['name'] ."</label>";
         }
 
         $status_items[] = "<input name='save_status' id='save_status' type='submit' value='{lang.button_save_default}' class='buttontiny' /> <span id='save_status_status' class='ajax_update_button'>{lang.saved}</span>";
@@ -1015,6 +909,21 @@ class td_ad_tickets {
         $this->trellis->skin->do_output();
     }
 
+    #=======================================
+    # @ Build SQL Order By
+    #=======================================
+    private function build_sql_order_by($orderBy)
+    {
+        $this->sqlOrderBy = $orderBy;
+    }
+
+    #=======================================
+    # @ Build SQL Where
+    #=======================================
+    private function build_sql_where($filter)
+    {
+
+    }
     #=======================================
     # @ View Ticket
     #=======================================
@@ -1270,7 +1179,7 @@ class td_ad_tickets {
             $t['priority_human'] = "<img src='<! TD_URL !>/images/priorities/{$this->trellis->cache->data['priorities'][ $t['priority'] ]['icon_regular']}' alt='{$this->trellis->cache->data['priorities'][ $t['priority'] ]['name']}' class='prioritybox' style='vertical-align:middle' />&nbsp;&nbsp;<a href='". $this->generate_url( array( 'fpriority' => array( $t['priority'] ) ) ) ."'>{$this->trellis->cache->data['priorities'][ $t['priority'] ]['name']}</a>";
         }
 
-        $t['status_human'] = "<a href='". $this->generate_url( array( 'fstatus' => array( $t['status'] ) ) ) ."'>". $this->trellis->cache->data['statuses'][ $t['status'] ]['name_staff'] ."</a>";
+        $t['status_human'] = "<a href='". $this->generate_url( array( 'fstatus' => array( $t['status'] ) ) ) ."'>". $this->trellis->cache->data['statuses'][ $t['status'] ]['name'] ."</a>";
 
         $t['dname'] = "<a href='". $this->generate_url( array( 'fdepart' => array( $t['did'] ) ) ) ."'>". $this->trellis->cache->data['departs'][ $t['did'] ]['name'] ."</a>";
 
@@ -2786,7 +2695,7 @@ class td_ad_tickets {
 
         $this->trellis->func->tickets->edit( $db_array, $t['id'] );
 
-        $this->trellis->log( array( 'msg' => array( 'ticket_status', $this->trellis->cache->data['statuses'][ $t['status'] ]['name_staff'], $this->trellis->cache->data['statuses'][ $this->trellis->input['sid'] ]['name_staff'], $t['subject'] ), 'type' => 'ticket', 'content_type' => 'ticket', 'content_id' => $t['id'] ) );
+        $this->trellis->log( array( 'msg' => array( 'ticket_status', $this->trellis->cache->data['statuses'][ $t['status'] ]['name'], $this->trellis->cache->data['statuses'][ $this->trellis->input['sid'] ]['name'], $t['subject'] ), 'type' => 'ticket', 'content_type' => 'ticket', 'content_id' => $t['id'] ) );
 
         #=============================
         # Redirect

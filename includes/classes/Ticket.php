@@ -20,6 +20,7 @@ class Ticket
     public int $uid;
     public string $email;
     public string $subject;
+    public string $totalTicketCount;
 
     public string $message;
     public int $html;
@@ -47,6 +48,7 @@ class Ticket
     {
         $this->db = $db;
         $this->user = $user;
+        $this->status = 7; //Set the default ticket status this is 'New' need to improve this to be dynamic but ok for now.
     }
     public function prepare_ticket_notification(Department $ticketDepartment) :string
     {
@@ -440,6 +442,43 @@ class Ticket
             return $this->db->runSql($sql, $data)->rowCount();
 
         }
+
+    }
+
+    public function fetch_tickets($defaultSort, $sortByCol = null, $sortByDirection = null, $filterActive = false,
+                                  $filter = null, $offset = 0, $fetch = 10)
+    {
+        $ViewName = $this->db->_dbPrefix."TicketListAdmin";
+
+
+        if ($defaultSort)
+        {
+            $sql = "SELECT * FROM $ViewName ORDER BY date ASC";
+        } else {
+
+        }
+
+        if($filterActive)
+        {
+            $data =[];
+            $data['filter'] = $filter;
+            $sql = "SELECT * FROM $ViewName WHERE :filter";
+
+            return $this->db->runSql($sql, $data)->fetchAll();
+        } else {
+            return $this->db->runSql($sql)->fetchAll();
+        }
+
+
+
+    }
+
+    public function total_num_tickets()
+    {
+        $table = $this->db->_dbPrefix."tickets";
+        $sql = "SELECT COUNT(*) FROM $table";
+
+        $this->db->runSql($sql)->fetch();
 
     }
 
