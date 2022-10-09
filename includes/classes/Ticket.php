@@ -310,7 +310,7 @@ class Ticket
         return true;
     }
 
-    public function fetch_ticket_by_ticket_id($userId, $ticketId) : array
+    public function fetch_ticket_by_ticket_id($userId, $ticketId)
     {
           $table_prefix = $this->db->_dbPrefix;
 
@@ -323,7 +323,7 @@ class Ticket
                 LEFT JOIN {$table_prefix}users u ON t.uid = u.id
                 LEFT JOIN {$table_prefix}assign_map a ON t.id = a.tid AND a.uid = $userId
                 LEFT JOIN {$table_prefix}attachments at ON t.mask = at.ticket_id
-                WHERE t.mask = '$ticketId' ";
+                WHERE t.id = '$ticketId' ";
 
             return $this->db->runSql($sql)->fetch();
     }
