@@ -181,7 +181,7 @@ class td_ad_tickets {
 
     private function list_tickets()
     {
-       include TD_TICKETS.'/list_tickets.php';
+       require TD_TICKETS.'/list_tickets.php';
     }
 
     #=======================================
@@ -205,7 +205,34 @@ class td_ad_tickets {
 
     private function view_ticket($params=array())
     {
-        include TD_TICKETS.'/view_ticket.php';
+        $userid = $this->trellis->user['id'];
+        $ticketId = $this->trellis->input['id'];
+
+        // Is this a valid ticket ID?
+        $ticketInternalId = $this->ticket->fetch_internal_ticket_id_based_on_mask($ticketId);
+
+        if(!$ticketInternalId)
+        {
+            $this->trellis->skin->error('no_ticket');
+        }
+
+        //Is Current user allowed to view this ticket?
+        $result = $this->ticket->is_current_user_allowed_view_ticket($ticketId, $userid);
+
+        if(!$result)
+        {
+            $this->trellis->skin->error('no_perm');
+        }
+
+
+
+        #=============================
+        # Grab Replies
+        #=============================
+
+        $replies = $this->ticket->fetch_ticket_replies($ticketInternalId);
+
+        require TD_TICKETS.'/view_ticket.php';
     }
 
     #=======================================
@@ -1211,7 +1238,7 @@ class td_ad_tickets {
         #=============================
         $ticket = [];
         $ticket['did'] = $this->trellis->input['did'];
-        $ticket['uid'] = $u['id'];
+        $ticket['uid'] = $this->trellis->user['id'];
         $ticket['email'] = $u['email'];
         $ticket['subject'] = $this->trellis->input['subject'];
         $ticket['priority'] = $this->trellis->input['priority'];
@@ -1295,73 +1322,7 @@ class td_ad_tickets {
 
     private function do_edit()
     {
-        #=============================
-        # Security Checks
-        #=============================
-
-        $validate = true;
-        if ( ! $this->trellis->input['subject'] )
-        {
-            $this->trellis->send_message( 'error', $this->trellis->lang['error_no_subject'] );
-            $validate = false;
-        }
-        if ( ! $this->trellis->input['priority'] )
-        {
-            $this->trellis->send_message( 'error', $this->trellis->lang['error_no_priority'] );
-            $validate = false;
-        }
-        if ( ! $this->trellis->input['message'] )
-        {
-            $this->trellis->send_message( 'error', $this->trellis->lang['error_no_message'] );
-            $validate = false;
-        }
-
-        if ( ! $t = $this->trellis->func->tickets->get_single_by_id( array( 'select' => array( 'id', 'did', 'closed' ) ), $this->trellis->input['id'] ) ) $this->trellis->skin->error('no_ticket');
-
-        if ( ! $this->check_perm( $t['id'], $t['did'], 'et' ) ) $this->trellis->skin->error('no_perm');
-
-        if ( $t['closed'] ) $this->trellis->skin->error('ticket_closed');
-
-        $this->trellis->load_functions('cdfields');
-
-        if( ! $fdata = $this->trellis->func->cdfields->process_input( $t['did'] ) )
-        {
-            if ( $this->trellis->func->cdfields->required_field )
-            {
-                $this->trellis->send_message( 'error', $this->trellis->lang['error_no_field'].' '. $this->trellis->func->cdfields->required_field );
-                $validate = false;
-            }
-        }
-
-        if ( ! $validate )
-        {
-            $this->trellis->skin->preserve_input = 1;
-            $this->edit_ticket();
-        }
-
-        #=============================
-        # Edit Ticket
-        #=============================
-
-        $db_array = array(
-                          'subject'        => $this->trellis->input['subject'],
-                          'priority'    => intval( $this->trellis->input['priority'] ),
-                          'message'        => $this->trellis->input['message'],
-                         );
-
-        $this->trellis->func->tickets->edit( $db_array, $t['id'] );
-
-        if ( $fdata ) $this->trellis->func->cdfields->set_data( $fdata, $t['id'] );
-
-        $this->trellis->log( array( 'msg' => array( 'ticket_edited', $this->trellis->input['subject'] ), 'type' => 'ticket', 'content_type' => 'ticket', 'content_id' => $t['id'] ) );
-
-        #=============================
-        # Redirect
-        #=============================
-
-        $this->trellis->send_message( 'alert', $this->trellis->lang['alert_ticket_updated'] );
-
-        $this->trellis->skin->redirect( array( 'act' => 'view', 'id' => $t['id'] ) );
+        require TD_TICKETS.'/edit_ticket.php';
     }
 
     #=======================================

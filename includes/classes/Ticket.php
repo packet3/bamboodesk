@@ -77,6 +77,12 @@ class Ticket
 
         return $html;
     }
+
+    public function edit_ticket_by_id(int $ticketId)
+    {
+
+    }
+
     public function fetch_ticket_priorty_level(int $ticketId): string
     {
         $data = [];
@@ -109,6 +115,14 @@ class Ticket
         {
             $this->add_custom_ticket_fields_data($this->ticketData['uid']);
         }
+
+        //Create Assign Map
+        $assignMapData = [];
+        $assignMapData['tid'] = $this->id;
+        $assignMapData['uid'] = $this->ticketData['uid'];
+        $assignMapData['did'] = $this->ticketData['did'];
+        $sql = "INSERT INTO " .$this->db->_dbPrefix."assign_map (tid, uid, did) VALUES(:tid, :uid, :did)";
+        $this->db->runSql($sql, $assignMapData);
 
 
         //Increment Department tickets count.
@@ -252,20 +266,20 @@ class Ticket
 
     }
 
-    public function increment_user_tickets_count(int $userId)
+    public function increment_user_tickets_count($userId)
     {
         $data = [];
         $data['id'] = $userId;
 
         $table = $this->db->_dbPrefix."users";
         $sql = "SELECT tickets_total, tickets_open FROM $table WHERE id =:id";
-        $statement = $this->db->runSql($sql, $data);
+        $statement = $this->db->runSql($sql, $data)->fetch();
 
-        $ticketsCurrentTotal = $statement->fetchColumn();
-        $ticketsCurrentOpen = $statement->fetchColumn(1);
+        $ticketsCurrentTotal = $statement['tickets_total'];
+        $ticketsCurrentOpen = $statement['tickets_open'];
 
-        $data['tickets_total'] = $ticketsCurrentTotal;
-        $data['tickets_open'] = $ticketsCurrentOpen;
+        $data['tickets_total'] = $ticketsCurrentTotal + 1;
+        $data['tickets_open'] = $ticketsCurrentOpen + 1;
 
         $sql = "UPDATE $table SET tickets_total = :tickets_total, tickets_open = :tickets_open WHERE id = :id";
         $this->db->runSql($sql, $data);
@@ -309,10 +323,51 @@ class Ticket
 
         return true;
     }
+    public function fetch_internal_ticket_id_based_on_mask($ticketMask): int
+    {
+        $table_prefix = $this->db->_dbPrefix;
 
-    public function fetch_ticket_by_ticket_id($userId, $ticketId)
+        $params = [];
+        $params['mask'] = $ticketMask;
+
+
+        $sql = "SELECT id FROM {$table_prefix}tickets WHERE mask = :mask";
+
+        $result = $this->db->runSql($sql, $params)->fetch();
+        if($result)
+        {
+            return $result['id'];
+        }
+
+        return 0;
+    }
+
+    public function is_current_user_allowed_view_ticket($ticketId, $userId): bool
+    {
+        $table_prefix = $this->db->_dbPrefix;
+
+
+        $params = [];
+        $params['tid'] = $this->fetch_internal_ticket_id_based_on_mask($ticketId);
+        $params['uid'] = $userId;
+
+        $sql = "SELECT id FROM {$table_prefix}assign_map WHERE tid = :tid AND uid = :uid";
+
+        $result = $this->db->runSql($sql, $params)->fetch();
+        if($result)
+        {
+            return true;
+        }
+
+        return false;
+
+    }
+
+    public function fetch_ticket_by_ticket_id($ticketId)
     {
           $table_prefix = $this->db->_dbPrefix;
+
+
 
 
 
@@ -321,7 +376,7 @@ class Ticket
                 FROM {$table_prefix}tickets t 
                 LEFT JOIN {$table_prefix}tickets_guests g ON t.id = g.id
                 LEFT JOIN {$table_prefix}users u ON t.uid = u.id
-                LEFT JOIN {$table_prefix}assign_map a ON t.id = a.tid AND a.uid = $userId
+                LEFT JOIN {$table_prefix}assign_map a ON t.id = a.tid
                 LEFT JOIN {$table_prefix}attachments at ON t.mask = at.ticket_id
                 WHERE t.id = '$ticketId' ";
 

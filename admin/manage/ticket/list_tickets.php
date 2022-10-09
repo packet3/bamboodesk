@@ -418,7 +418,7 @@
 
                 $ticket_rows .= ">";
 
-                if ( $name == 'id' || $name == 'mask' ) $ticket_rows .= "<a href='<! TD_URL !>/admin.php?section=manage&amp;page=tickets&amp;act=view&amp;id={$t['id']}'>";
+                if ( $name == 'id' || $name == 'mask' ) $ticket_rows .= "<a href='<! TD_URL !>/admin.php?section=manage&amp;page=tickets&amp;act=view&amp;id={$t['mask']}'>";
 
                 if ( $name == 'id' ) $ticket_rows .= "<strong>";
 
