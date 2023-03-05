@@ -1,63 +1,89 @@
 <?php
+/**
+ * Smarty Internal Plugin Compile Function_Call
+ * Compiles the calls of user defined tags defined by {function}
+ *
+ * @package    Smarty
+ * @subpackage Compiler
+ * @author     Uwe Tews
+ */
 
 /**
-* Smarty Internal Plugin Compile Function_Call
-* 
-* Compiles the calls of user defined tags defined by {function}
-* 
-* @package Smarty
-* @subpackage Compiler
-* @author Uwe Tews 
-*/
-/**
-* Smarty Internal Plugin Compile Function_Call Class
-*/
-class Smarty_Internal_Compile_Call extends Smarty_Internal_CompileBase {
+ * Smarty Internal Plugin Compile Function_Call Class
+ *
+ * @package    Smarty
+ * @subpackage Compiler
+ */
+class Smarty_Internal_Compile_Call extends Smarty_Internal_CompileBase
+{
     /**
-    * Compiles the calls of user defined tags defined by {function}
-    * 
-    * @param array $args array with attributes from parser
-    * @param object $compiler compiler object
-    * @return string compiled code
-    */
+     * Attribute definition: Overwrites base class.
+     *
+     * @var array
+     * @see Smarty_Internal_CompileBase
+     */
+    public $required_attributes = array('name');
+
+    /**
+     * Attribute definition: Overwrites base class.
+     *
+     * @var array
+     * @see Smarty_Internal_CompileBase
+     */
+    public $shorttag_order = array('name');
+
+    /**
+     * Attribute definition: Overwrites base class.
+     *
+     * @var array
+     * @see Smarty_Internal_CompileBase
+     */
+    public $optional_attributes = array('_any');
+
+    /**
+     * Compiles the calls of user defined tags defined by {function}
+     *
+     * @param array  $args     array with attributes from parser
+     * @param object $compiler compiler object
+     *
+     * @return string compiled code
+     */
     public function compile($args, $compiler)
     {
-        $this->compiler = $compiler;
-        $this->required_attributes = array('name');
-        $this->optional_attributes = array('_any'); 
         // check and get attributes
-        $_attr = $this->_get_attributes($args); 
-        // save posible attributes
-        if (isset($_attr['assign'])) {
-            // output will be stored in a smarty variable instead of beind displayed
-            $_assign = $_attr['assign'];
-        } 
+        $_attr = $this->getAttributes($compiler, $args);
+        // save possible attributes
+        if (isset($_attr[ 'assign' ])) {
+            // output will be stored in a smarty variable instead of being displayed
+            $_assign = $_attr[ 'assign' ];
+        }
+        //$_name = trim($_attr['name'], "''");
+        $_name = $_attr[ 'name' ];
+        unset($_attr[ 'name' ], $_attr[ 'assign' ], $_attr[ 'nocache' ]);
         // set flag (compiled code of {function} must be included in cache file
-        if ($this->compiler->nocache || $this->compiler->tag_nocache) {
-            $nocache = 'true';
+        if (!$compiler->template->caching || $compiler->nocache || $compiler->tag_nocache) {
+            $_nocache = 'true';
         } else {
-            $nocache = 'false';
-        } 
-        // create template object
-        $_output = "<?php \$_template = new Smarty_Internal_Function_Call_Handler ({$_attr['name']}, \$_smarty_tpl->smarty, \$_smarty_tpl, {$nocache});\n"; 
-        // delete {include} standard attributes
-        unset($_attr['name'], $_attr['assign']); 
-        // remaining attributes must be assigned as smarty variable
-        if (!empty($_attr)) {
-            // create variables
-            foreach ($_attr as $_key => $_value) {
-                $_output .= "\$_template->assign('$_key',$_value);\n";
-            } 
-        } 
+            $_nocache = 'false';
+        }
+        $_paramsArray = array();
+        foreach ($_attr as $_key => $_value) {
+            if (is_int($_key)) {
+                $_paramsArray[] = "$_key=>$_value";
+            } else {
+                $_paramsArray[] = "'$_key'=>$_value";
+            }
+        }
+        $_params = 'array(' . implode(',', $_paramsArray) . ')';
+        //$compiler->suppressNocacheProcessing = true;
         // was there an assign attribute
         if (isset($_assign)) {
-            $_output .= "\$_smarty_tpl->assign({$_assign},\$_template->getRenderedTemplate());\n";
+            $_output =
+                "<?php ob_start();\n\$_smarty_tpl->smarty->ext->_tplFunction->callTemplateFunction(\$_smarty_tpl, {$_name}, {$_params}, {$_nocache});\n\$_smarty_tpl->assign({$_assign}, ob_get_clean());?>\n";
         } else {
-            $_output .= "echo \$_template->getRenderedTemplate();\n";
-        } 
-        $_output .= 'unset($_template);?>';
+            $_output =
+                "<?php \$_smarty_tpl->smarty->ext->_tplFunction->callTemplateFunction(\$_smarty_tpl, {$_name}, {$_params}, {$_nocache});?>\n";
+        }
         return $_output;
-    } 
-} 
-
-?>
+    }
+}

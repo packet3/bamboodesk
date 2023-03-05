@@ -131,7 +131,7 @@ class trellis {
         #=============================
 
         # FIXME: Should not have to do this.  Allow plugin system to specify if session is requried, etc.
-
+        /*
         if ( $this->input['page'] == 'antispam' )
         {
             $this->load_antispam();
@@ -142,6 +142,7 @@ class trellis {
 
             exit();
         }
+        */
 
         #=============================
         # Check Cache

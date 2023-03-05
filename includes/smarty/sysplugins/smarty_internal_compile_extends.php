@@ -1,86 +1,158 @@
 <?php
+/**
+ * Smarty Internal Plugin Compile extend
+ * Compiles the {extends} tag
+ *
+ * @package    Smarty
+ * @subpackage Compiler
+ * @author     Uwe Tews
+ */
 
 /**
-* Smarty Internal Plugin Compile extend
-* 
-* Compiles the {extends} tag
-* 
-* @package Smarty
-* @subpackage Compiler
-* @author Uwe Tews 
-*/
-/**
-* Smarty Internal Plugin Compile extend Class
-*/
-class Smarty_Internal_Compile_Extends extends Smarty_Internal_CompileBase {
+ * Smarty Internal Plugin Compile extend Class
+ *
+ * @package    Smarty
+ * @subpackage Compiler
+ */
+class Smarty_Internal_Compile_Extends extends Smarty_Internal_Compile_Shared_Inheritance
+{
     /**
-    * Compiles code for the {extends} tag
-    * 
-    * @param array $args array with attributes from parser
-    * @param object $compiler compiler object
-    * @return string compiled code
-    */
-    public function compile($args, $compiler)
+     * Attribute definition: Overwrites base class.
+     *
+     * @var array
+     * @see Smarty_Internal_CompileBase
+     */
+    public $required_attributes = array('file');
+
+    /**
+     * Array of names of optional attribute required by tag
+     * use array('_any') if there is no restriction of attributes names
+     *
+     * @var array
+     */
+    public $optional_attributes = array('extends_resource');
+
+    /**
+     * Attribute definition: Overwrites base class.
+     *
+     * @var array
+     * @see Smarty_Internal_CompileBase
+     */
+    public $shorttag_order = array('file');
+
+    /**
+     * Compiles code for the {extends} tag extends: resource
+     *
+     * @param array                                 $args     array with attributes from parser
+     * @param \Smarty_Internal_TemplateCompilerBase $compiler compiler object
+     *
+     * @return string compiled code
+     * @throws \SmartyCompilerException
+     * @throws \SmartyException
+     */
+    public function compile($args, Smarty_Internal_TemplateCompilerBase $compiler)
     {
-        $this->compiler = $compiler;
-        $this->smarty = $compiler->smarty;
-        $this->_rdl = preg_quote($this->smarty->right_delimiter);
-        $this->_ldl = preg_quote($this->smarty->left_delimiter);
-        $this->required_attributes = array('file'); 
         // check and get attributes
-        $_attr = $this->_get_attributes($args);
-        $_smarty_tpl = $compiler->template; 
-        // $include_file = '';
-        eval('$include_file = ' . $_attr['file'] . ';'); 
-        // create template object
-        $_template = new $compiler->smarty->template_class($include_file, $this->smarty, $compiler->template); 
-        // save file dependency
-        $compiler->template->properties['file_dependency'][sha1($_template->getTemplateFilepath())] = array($_template->getTemplateFilepath(), $_template->getTemplateTimestamp());
-        $_old_source = $compiler->template->template_source;
-        if (preg_match_all("!({$this->_ldl}block(.+?){$this->_rdl})!", $_old_source, $s, PREG_OFFSET_CAPTURE) !=
-                preg_match_all("!({$this->_ldl}/block(.*?){$this->_rdl})!", $_old_source, $c, PREG_OFFSET_CAPTURE)) {
-            $this->compiler->trigger_template_error('unmatched {block} {/block} pairs');
-        } 
-        $block_count = count($s[0]);
-        for ($i = 0; $i < $block_count; $i++) {
-            $block_content = str_replace($this->smarty->left_delimiter . '$smarty.parent' . $this->smarty->right_delimiter, '%%%%SMARTY_PARENT%%%%',
-                substr($_old_source, $s[0][$i][1] + strlen($s[0][$i][0]), $c[0][$i][1] - $s[0][$i][1] - strlen($s[0][$i][0])));
-            $this->saveBlockData($block_content, $s[0][$i][0], $compiler->template);
-        } 
-        $compiler->template->template_source = $_template->getTemplateSource();
-        $compiler->template->template_filepath = $_template->getTemplateFilepath();
-        $compiler->abort_and_recompile = true;
-        return ' ';
-    } 
-
-    protected function saveBlockData($block_content, $block_tag, $template)
-    {
-        if (0 == preg_match("!(.?)(name=)(.*?)(?=(\s|{$this->_rdl}))!", $block_tag, $_match)) {
-            $this->compiler->trigger_template_error("\"" . $block_tag . "\" missing name attribute");
+        $_attr = $this->getAttributes($compiler, $args);
+        if ($_attr[ 'nocache' ] === true) {
+            $compiler->trigger_template_error('nocache option not allowed', $compiler->parser->lex->line - 1);
+        }
+        if (strpos($_attr[ 'file' ], '$_tmp') !== false) {
+            $compiler->trigger_template_error('illegal value for file attribute', $compiler->parser->lex->line - 1);
+        }
+        // add code to initialize inheritance
+        $this->registerInit($compiler, true);
+        $file = trim($_attr[ 'file' ], '\'"');
+        if (strlen($file) > 8 && substr($file, 0, 8) === 'extends:') {
+            // generate code for each template
+            $files = array_reverse(explode('|', substr($file, 8)));
+            $i = 0;
+            foreach ($files as $file) {
+                if ($file[ 0 ] === '"') {
+                    $file = trim($file, '".');
+                } else {
+                    $file = "'{$file}'";
+                }
+                $i++;
+                if ($i === count($files) && isset($_attr[ 'extends_resource' ])) {
+                    $this->compileEndChild($compiler);
+                }
+                $this->compileInclude($compiler, $file);
+            }
+            if (!isset($_attr[ 'extends_resource' ])) {
+                $this->compileEndChild($compiler);
+            }
         } else {
-            $_name = trim($_match[3], '\'"');
-            if (isset($this->smarty->block_data[$_name])) {
-                if (strpos($this->smarty->block_data[$_name]['source'], '%%%%SMARTY_PARENT%%%%') !== false) {
-                    $this->smarty->block_data[$_name]['source'] =
-                    str_replace('%%%%SMARTY_PARENT%%%%', $block_content, $this->smarty->block_data[$_name]['source']);
-                } elseif ($this->smarty->block_data[$_name]['mode'] == 'prepend') {
-                    $this->smarty->block_data[$_name]['source'] .= $block_content;
-                } elseif ($this->smarty->block_data[$_name]['mode'] == 'append') {
-                    $this->smarty->block_data[$_name]['source'] = $block_content . $this->smarty->block_data[$_name]['source'];
-                } 
-            } else {
-                $this->smarty->block_data[$_name]['source'] = $block_content;
-            } 
-            if (preg_match('/(.?)(append)(.*)/', $block_tag, $_match) != 0) {
-                $this->smarty->block_data[$_name]['mode'] = 'append';
-            } elseif (preg_match('/(.?)(prepend)(.*)/', $block_tag, $_match) != 0) {
-                $this->smarty->block_data[$_name]['mode'] = 'prepend';
-            } else {
-                $this->smarty->block_data[$_name]['mode'] = 'replace';
-            } 
-            $this->smarty->block_data[$_name]['file'] = $template->getTemplateFilepath();
-        } 
-    } 
-} 
+            $this->compileEndChild($compiler, $_attr[ 'file' ]);
+        }
+        $compiler->has_code = false;
+        return '';
+    }
 
-?>
+    /**
+     * Add code for inheritance endChild() method to end of template
+     *
+     * @param \Smarty_Internal_TemplateCompilerBase $compiler
+     * @param null|string                           $template optional inheritance parent template
+     *
+     * @throws \SmartyCompilerException
+     * @throws \SmartyException
+     */
+    private function compileEndChild(Smarty_Internal_TemplateCompilerBase $compiler, $template = null)
+    {
+        $inlineUids = '';
+        if (isset($template) && $compiler->smarty->merge_compiled_includes) {
+            $code = $compiler->compileTag('include', array($template, array('scope' => 'parent')));
+            if (preg_match('/([,][\s]*[\'][a-z0-9]+[\'][,][\s]*[\']content.*[\'])[)]/', $code, $match)) {
+                $inlineUids = $match[ 1 ];
+            }
+        }
+        $compiler->parser->template_postfix[] = new Smarty_Internal_ParseTree_Tag(
+            $compiler->parser,
+            '<?php $_smarty_tpl->inheritance->endChild($_smarty_tpl' .
+            (isset($template) ?
+                ", {$template}{$inlineUids}" :
+                '') . ");\n?>"
+        );
+    }
+
+    /**
+     * Add code for including subtemplate to end of template
+     *
+     * @param \Smarty_Internal_TemplateCompilerBase $compiler
+     * @param string                                $template subtemplate name
+     *
+     * @throws \SmartyCompilerException
+     * @throws \SmartyException
+     */
+    private function compileInclude(Smarty_Internal_TemplateCompilerBase $compiler, $template)
+    {
+        $compiler->parser->template_postfix[] = new Smarty_Internal_ParseTree_Tag(
+            $compiler->parser,
+            $compiler->compileTag(
+                'include',
+                array(
+                    $template,
+                    array('scope' => 'parent')
+                )
+            )
+        );
+    }
+
+    /**
+     * Create source code for {extends} from source components array
+     *
+     * @param \Smarty_Internal_Template $template
+     *
+     * @return string
+     */
+    public static function extendsSourceArrayCode(Smarty_Internal_Template $template)
+    {
+        $resources = array();
+        foreach ($template->source->components as $source) {
+            $resources[] = $source->resource;
+        }
+        return $template->smarty->left_delimiter . 'extends file=\'extends:' . join('|', $resources) .
+               '\' extends_resource=true' . $template->smarty->right_delimiter;
+    }
+}

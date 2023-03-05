@@ -24,7 +24,7 @@ class td_class_skin {
         # Send Charset Header
         #=============================
 
-        header('Content-Type: text/html; charset=utf-8');
+        //header('Content-Type: text/html; charset=utf-8');
 
         #=============================
         # Load Smarty
@@ -50,10 +50,10 @@ class td_class_skin {
         # Load Functions
         #=============================
 
-        $this->smarty->register_function( 'lv_field', array( 'td_class_skin', 'lv_add_field' ) );
-        $this->smarty->register_function( 'lv_rule', array( 'td_class_skin', 'lv_add_rule' ) );
-        $this->smarty->register_function( 'focus', array( 'td_class_skin', 'focus_js' ) );
-        $this->smarty->register_function( 'scroll', array( 'td_class_skin', 'scroll_to_js' ) );
+        $this->smarty->registerPlugin( "function", 'lv_field', array( 'td_class_skin', 'lv_add_field' ) );
+        $this->smarty->registerPlugin( "function",'lv_rule', array( 'td_class_skin', 'lv_add_rule' ) );
+       $this->smarty->registerPlugin( "function", 'focus', array( 'td_class_skin', 'focus_js' ) );
+        $this->smarty->registerPlugin( "function", 'scroll', array( 'td_class_skin', 'scroll_to_js' ) );
 
         #=============================
         # Set Paths
@@ -187,8 +187,7 @@ class td_class_skin {
 
             if ( is_array( $nav_links ) )
             {
-                while ( list( , $nlink ) = each( $nav_links ) )
-                {
+                foreach ($nav_links as $nlink) {
                     $nav_tree .= ' &rsaquo; '. $nlink;
                 }
             }
